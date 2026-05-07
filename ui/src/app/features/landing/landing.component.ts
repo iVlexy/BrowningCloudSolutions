@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core'
+import { DecimalPipe } from '@angular/common'
 import { RouterLink } from '@angular/router'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
@@ -9,7 +10,7 @@ import type { Service } from '../../shared/models'
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatIconModule, MatCardModule],
+  imports: [RouterLink, DecimalPipe, MatButtonModule, MatIconModule, MatCardModule],
   template: `
     <!-- Hero -->
     <section class="hero">
@@ -35,12 +36,12 @@ import type { Service } from '../../shared/models'
       </div>
       <div class="hero-visual">
         <div class="hero-card">
-          <div class="code-line"><span class="kw">const</span> <span class="var">site</span> = {</div>
+          <div class="code-line"><span class="kw">const</span> <span class="var">site</span> = {{ '{' }}</div>
           <div class="code-line indent"><span class="key">design</span>: <span class="str">'modern'</span>,</div>
           <div class="code-line indent"><span class="key">performance</span>: <span class="num">100</span>,</div>
           <div class="code-line indent"><span class="key">mobile</span>: <span class="bool">true</span>,</div>
           <div class="code-line indent"><span class="key">scalable</span>: <span class="bool">true</span>,</div>
-          <div class="code-line">}</div>
+          <div class="code-line">{{ '}' }}</div>
         </div>
       </div>
     </section>
@@ -329,7 +330,7 @@ export class LandingComponent implements OnInit {
     { icon: 'speed', title: 'Lightning Fast', desc: 'Sites built on modern stacks with edge hosting for blazing performance.' },
     { icon: 'devices', title: 'Mobile First', desc: 'Every site is fully responsive and tested across all screen sizes.' },
     { icon: 'security', title: 'Secure by Default', desc: 'HTTPS, secure coding practices, and regular security audits baked in.' },
-    { icon: 'support_agent', title: 'Ongoing Support', desc: 'We don't disappear after launch. Maintenance plans keep you covered.' },
+    { icon: 'support_agent', title: 'Ongoing Support', desc: "We don't disappear after launch. Maintenance plans keep you covered." },
   ]
 
   ngOnInit() {

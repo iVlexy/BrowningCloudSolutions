@@ -119,7 +119,7 @@ import type { PublicInvoice } from '../../shared/models'
 
               <div class="alt-payment">
                 <p><strong>Pay by Check:</strong> Make payable to "Browning Cloud Solutions" and mail to our address, referencing invoice {{ invoice()!.invoiceNumber }}.</p>
-                <p><strong>Pay by Cash / Bank Transfer:</strong> Contact us at <a href="mailto:billing@browningcloud.com">billing@browningcloud.com</a> to arrange.</p>
+                <p><strong>Pay by Cash / Bank Transfer:</strong> Contact us at <a href="mailto:billing&#64;browningcloud.com">billing&#64;browningcloud.com</a> to arrange.</p>
               </div>
             </div>
           }

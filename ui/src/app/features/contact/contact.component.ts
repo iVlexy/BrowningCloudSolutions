@@ -88,8 +88,10 @@ import { ApiService } from '../../core/services/api.service'
                 class="submit-btn">
                 @if (loading()) { Sending... }
                 @else {
-                  <mat-icon>send</mat-icon>
-                  Send Message
+                  <ng-container>
+                    <mat-icon>send</mat-icon>
+                    Send Message
+                  </ng-container>
                 }
               </button>
             </form>
