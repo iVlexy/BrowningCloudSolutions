@@ -8,10 +8,9 @@ export const authGuard: CanActivateFn = async () => {
   const ok = await auth.checkAuth()
   if (!ok) {
     // CF Access only intercepts real HTTP requests, not SPA navigation.
-    // Avoid infinite loop: only hard-redirect if not already on /admin.
-    if (!window.location.pathname.startsWith('/admin')) {
-      window.location.href = '/admin'
-    }
+    // Always force a full page reload — CF Access redirects to login if not
+    // authenticated, or immediately back to /admin if already logged in.
+    window.location.href = '/admin'
     return false
   }
   return true

@@ -10,14 +10,16 @@ interface AuthUser {
 export class AuthService {
   private http = inject(HttpClient)
   private baseUrl = environment.apiUrl
-  private authChecked = false
+  private authenticated = false
 
   user = signal<AuthUser | null>(null)
   loading = signal(true)
 
   checkAuth(): Promise<boolean> {
-    if (this.authChecked) {
-      return Promise.resolve(this.user() !== null)
+    // Only cache positive auth — on failure, always retry so that after
+    // CF Access login the guard picks up the new cookie immediately.
+    if (this.authenticated) {
+      return Promise.resolve(true)
     }
     return this.http
       .get<AuthUser>(`${this.baseUrl}/api/auth/me`)
@@ -25,13 +27,12 @@ export class AuthService {
       .then((user) => {
         this.user.set(user ?? null)
         this.loading.set(false)
-        this.authChecked = true
-        return !!user
+        this.authenticated = true
+        return true
       })
       .catch(() => {
         this.user.set(null)
         this.loading.set(false)
-        this.authChecked = true
         return false
       })
   }
