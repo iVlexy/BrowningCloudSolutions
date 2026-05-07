@@ -7,9 +7,11 @@ export const authGuard: CanActivateFn = async () => {
 
   const ok = await auth.checkAuth()
   if (!ok) {
-    // CF Zero Trust only intercepts real HTTP requests, not SPA navigation.
-    // Force a full page reload so CF Access can intercept and show the login page.
-    window.location.href = '/admin'
+    // CF Access only intercepts real HTTP requests, not SPA navigation.
+    // Avoid infinite loop: only hard-redirect if not already on /admin.
+    if (!window.location.pathname.startsWith('/admin')) {
+      window.location.href = '/admin'
+    }
     return false
   }
   return true

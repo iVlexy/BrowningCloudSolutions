@@ -10,22 +10,28 @@ interface AuthUser {
 export class AuthService {
   private http = inject(HttpClient)
   private baseUrl = environment.apiUrl
+  private authChecked = false
 
   user = signal<AuthUser | null>(null)
   loading = signal(true)
 
   checkAuth(): Promise<boolean> {
+    if (this.authChecked) {
+      return Promise.resolve(this.user() !== null)
+    }
     return this.http
       .get<AuthUser>(`${this.baseUrl}/api/auth/me`)
       .toPromise()
       .then((user) => {
         this.user.set(user ?? null)
         this.loading.set(false)
+        this.authChecked = true
         return !!user
       })
       .catch(() => {
         this.user.set(null)
         this.loading.set(false)
+        this.authChecked = true
         return false
       })
   }
