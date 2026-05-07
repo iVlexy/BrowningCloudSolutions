@@ -1,0 +1,29 @@
+# Node modules
+node_modules/
+api/node_modules/
+ui/node_modules/
+
+# Build outputs
+ui/dist/
+api/dist/
+
+# Environment & secrets
+.env
+.env.local
+.dev.vars
+
+# Angular cache
+ui/.angular/
+
+# Wrangler
+.wrangler/
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
