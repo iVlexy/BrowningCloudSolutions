@@ -1,0 +1,5 @@
+/*
+  Cloudflare Pages SPA redirect — all routes serve index.html
+  https://developers.cloudflare.com/pages/configuration/redirects/
+*/
+/* /index.html 200

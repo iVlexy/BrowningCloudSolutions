@@ -1,0 +1,15 @@
+name = "bcs-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bcs-db"
+database_id = "YOUR_D1_DATABASE_ID_HERE"
+
+[vars]
+CF_TEAM_DOMAIN = "browningcloud"
+FRONTEND_URL = "https://browningcloud.com"
+FROM_EMAIL = "invoices@browningcloud.com"
+COMPANY_NAME = "Browning Cloud Solutions"
