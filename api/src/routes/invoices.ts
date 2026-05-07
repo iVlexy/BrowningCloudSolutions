@@ -215,23 +215,23 @@ router.post('/:id/send', async (c) => {
     companyName: c.env.COMPANY_NAME,
   })
 
-  const emailRes = await fetch('https://api.resend.com/emails', {
+  const emailRes = await fetch('https://api.sendgrid.com/v3/mail/send', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${c.env.RESEND_API_KEY}`,
+      Authorization: `Bearer ${c.env.SENDGRID_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: `${c.env.COMPANY_NAME} <${c.env.FROM_EMAIL}>`,
-      to: client.email,
+      personalizations: [{ to: [{ email: client.email }] }],
+      from: { email: c.env.FROM_EMAIL, name: c.env.COMPANY_NAME },
       subject: `Invoice ${invoice.invoiceNumber} from ${c.env.COMPANY_NAME}`,
-      html: emailHtml,
+      content: [{ type: 'text/html', value: emailHtml }],
     }),
   })
 
   if (!emailRes.ok) {
     const err = await emailRes.text()
-    console.error('Resend error:', err)
+    console.error('SendGrid error:', err)
     return c.json({ error: 'Failed to send email' }, 500)
   }
 

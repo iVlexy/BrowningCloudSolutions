@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "bcs-db"
-database_id = "YOUR_D1_DATABASE_ID_HERE"
+database_id = "5b1a6c12-5863-489e-a8b6-897e71716747"
 
 [vars]
 CF_TEAM_DOMAIN = "browningcloud"

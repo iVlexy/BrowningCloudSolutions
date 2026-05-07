@@ -2,7 +2,7 @@ export type Env = {
   DB: D1Database
   STRIPE_SECRET_KEY: string
   STRIPE_WEBHOOK_SECRET: string
-  RESEND_API_KEY: string
+  SENDGRID_API_KEY: string
   CF_TEAM_DOMAIN: string
   FRONTEND_URL: string
   FROM_EMAIL: string

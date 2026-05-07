@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://bcs-api.browningcloud.workers.dev',
+  apiUrl: 'https://bcs-api.browningethan23.workers.dev',
 }

@@ -32,22 +32,23 @@ router.post('/', async (c) => {
   await db.insert(contactRequests).values(request)
 
   // Notify via email (best-effort)
-  if (c.env.RESEND_API_KEY) {
-    await fetch('https://api.resend.com/emails', {
+  if (c.env.SENDGRID_API_KEY) {
+    await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${c.env.RESEND_API_KEY}`,
+        Authorization: `Bearer ${c.env.SENDGRID_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: `${c.env.COMPANY_NAME} <${c.env.FROM_EMAIL}>`,
-        to: c.env.FROM_EMAIL,
+        personalizations: [{ to: [{ email: c.env.FROM_EMAIL }] }],
+        from: { email: c.env.FROM_EMAIL, name: c.env.COMPANY_NAME },
         subject: `New contact request from ${body.name}`,
-        html: `<p><strong>Name:</strong> ${body.name}</p>
-               <p><strong>Email:</strong> ${body.email}</p>
-               ${body.phone ? `<p><strong>Phone:</strong> ${body.phone}</p>` : ''}
-               ${body.company ? `<p><strong>Company:</strong> ${body.company}</p>` : ''}
-               <p><strong>Message:</strong></p><p>${body.message}</p>`,
+        content: [{ type: 'text/html', value:
+          `<p><strong>Name:</strong> ${body.name}</p>
+           <p><strong>Email:</strong> ${body.email}</p>
+           ${body.phone ? `<p><strong>Phone:</strong> ${body.phone}</p>` : ''}
+           ${body.company ? `<p><strong>Company:</strong> ${body.company}</p>` : ''}
+           <p><strong>Message:</strong></p><p>${body.message}</p>` }],
       }),
     }).catch(() => {/* non-critical */})
   }
