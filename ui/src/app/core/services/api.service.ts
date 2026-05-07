@@ -43,6 +43,10 @@ export class ApiService {
     return this.http.post<{ success?: boolean; checkoutUrl?: string }>(`${this.base}/api/clients/${clientId}/recurring/setup`, data)
   }
 
+  sendRecurringSetupEmail(clientId: string): Observable<{ success: boolean }> {
+    return this.http.post<{ success: boolean }>(`${this.base}/api/clients/${clientId}/recurring/send`, {})
+  }
+
   cancelRecurring(clientId: string): Observable<{ success: boolean }> {
     return this.http.delete<{ success: boolean }>(`${this.base}/api/clients/${clientId}/recurring`)
   }

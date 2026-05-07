@@ -105,8 +105,11 @@ import type { Client, Invoice } from '../../../shared/models'
                   </div>
                   <p class="pending-hint">Share the Stripe checkout link with the customer to complete setup.</p>
                   <div class="pending-actions">
-                    <button mat-stroked-button (click)="resendStripeSetup()">
-                      <mat-icon>link</mat-icon>Get new link
+                    <button mat-flat-button class="email-btn" (click)="emailStripeSetup()" [disabled]="savingRecurring()">
+                      <mat-icon>email</mat-icon>Email setup link
+                    </button>
+                    <button mat-stroked-button (click)="copyStripeSetupLink()">
+                      <mat-icon>content_copy</mat-icon>Copy link
                     </button>
                     <button mat-stroked-button color="warn" (click)="cancelRecurring()">
                       <mat-icon>close</mat-icon>Cancel
@@ -282,7 +285,8 @@ import type { Client, Invoice } from '../../../shared/models'
 
     .cancel-btn { align-self: flex-start; }
     .pending-hint { font-size: 13px; color: #666; margin: 0; }
-    .pending-actions { display: flex; gap: 8px; }
+    .pending-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .email-btn { background: #1565C0 !important; color: #fff !important; display: flex; align-items: center; gap: 6px; }
   `],
 })
 export class ClientDetailComponent implements OnInit {
@@ -342,10 +346,8 @@ export class ClientDetailComponent implements OnInit {
       next: (res) => {
         this.savingRecurring.set(false)
         if (res.checkoutUrl) {
-          // Copy link to clipboard and open in new tab
           navigator.clipboard.writeText(res.checkoutUrl).catch(() => {})
-          window.open(res.checkoutUrl, '_blank')
-          this.snack.open('Stripe setup link opened & copied to clipboard', '', { duration: 5000 })
+          this.snack.open('Stripe setup link copied — send it to the customer to enter their card', '', { duration: 6000 })
           this.loadClient()
         } else {
           this.snack.open('Recurring billing activated', '', { duration: 3000 })
@@ -356,7 +358,16 @@ export class ClientDetailComponent implements OnInit {
     })
   }
 
-  resendStripeSetup() {
+  emailStripeSetup() {
+    this.savingRecurring.set(true)
+    this.api.sendRecurringSetupEmail(this.id).subscribe({
+      next: () => { this.savingRecurring.set(false); this.snack.open(`Setup email sent to ${this.client()?.email}`, '', { duration: 4000 }) },
+      error: () => { this.savingRecurring.set(false); this.snack.open('Failed to send email', 'Dismiss', { duration: 4000 }) },
+    })
+  }
+
+  copyStripeSetupLink() {
+    // Generate a fresh link and copy it
     const amount = this.client()?.monthlyAmount
     if (!amount) return
     this.savingRecurring.set(true)
@@ -365,8 +376,7 @@ export class ClientDetailComponent implements OnInit {
         this.savingRecurring.set(false)
         if (res.checkoutUrl) {
           navigator.clipboard.writeText(res.checkoutUrl).catch(() => {})
-          window.open(res.checkoutUrl, '_blank')
-          this.snack.open('New Stripe setup link opened & copied to clipboard', '', { duration: 5000 })
+          this.snack.open('Setup link copied to clipboard', '', { duration: 4000 })
         }
       },
       error: () => { this.savingRecurring.set(false) },

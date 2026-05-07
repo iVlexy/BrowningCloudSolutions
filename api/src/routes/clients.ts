@@ -179,6 +179,102 @@ router.post('/:id/recurring/setup', async (c) => {
   return c.json({ checkoutUrl: session.url })
 })
 
+router.post('/:id/recurring/send', async (c) => {
+  const db = getDb(c.env.DB)
+  const id = c.req.param('id')
+
+  const client = await db
+    .select()
+    .from(clients)
+    .where(and(eq(clients.id, id), eq(clients.isDeleted, false)))
+    .get()
+
+  if (!client) return c.json({ error: 'Client not found' }, 404)
+  if (client.billingMethod !== 'stripe') return c.json({ error: 'Not a Stripe billing client' }, 400)
+
+  // Generate a fresh Checkout session
+  const stripe = new Stripe(c.env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() })
+
+  let stripeCustomerId = client.stripeCustomerId
+  if (!stripeCustomerId) {
+    const customer = await stripe.customers.create({ email: client.email, name: client.name })
+    stripeCustomerId = customer.id
+    await db.update(clients).set({ stripeCustomerId, updatedAt: Math.floor(Date.now() / 1000) }).where(eq(clients.id, id))
+  }
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    customer: stripeCustomerId,
+    line_items: [{
+      price_data: {
+        currency: 'usd',
+        product_data: { name: 'Monthly Service Fee' },
+        unit_amount: Math.round((client.monthlyAmount ?? 0) * 100),
+        recurring: { interval: 'month' },
+      },
+      quantity: 1,
+    }],
+    metadata: { clientId: id },
+    success_url: `${c.env.FRONTEND_URL}/admin/clients/${id}?subscription=success`,
+    cancel_url: `${c.env.FRONTEND_URL}/admin/clients/${id}`,
+  })
+
+  const checkoutUrl = session.url!
+  const emailHtml = generateSubscriptionEmail({ client, checkoutUrl, companyName: c.env.COMPANY_NAME })
+
+  const emailRes = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${c.env.SENDGRID_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: client.email }] }],
+      from: { email: c.env.FROM_EMAIL, name: c.env.COMPANY_NAME },
+      subject: `Set up your monthly billing with ${c.env.COMPANY_NAME}`,
+      content: [{ type: 'text/html', value: emailHtml }],
+    }),
+  })
+
+  if (!emailRes.ok) {
+    const err = await emailRes.text()
+    console.error('SendGrid error:', err)
+    return c.json({ error: 'Failed to send email' }, 500)
+  }
+
+  return c.json({ success: true })
+})
+
+function generateSubscriptionEmail({
+  client,
+  checkoutUrl,
+  companyName,
+}: {
+  client: { name: string; email: string }
+  checkoutUrl: string
+  companyName: string
+}) {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+    <div style="background:#1565C0;padding:30px 40px;">
+      <h1 style="margin:0;color:#fff;font-size:24px;">${companyName}</h1>
+      <p style="margin:8px 0 0;color:#90CAF9;font-size:14px;">Monthly Billing Setup</p>
+    </div>
+    <div style="padding:40px;">
+      <p style="margin:0 0 20px;">Hi ${client.name},</p>
+      <p style="margin:0 0 24px;color:#555;">We've set up a monthly billing plan for you. Please click the button below to securely enter your payment details — it only takes a minute.</p>
+      <div style="text-align:center;margin:32px 0;">
+        <a href="${checkoutUrl}" style="display:inline-block;background:#1565C0;color:#fff;padding:16px 40px;text-decoration:none;border-radius:6px;font-size:16px;font-weight:bold;">Set Up Billing</a>
+      </div>
+      <p style="color:#888;font-size:13px;">Or copy this link: <a href="${checkoutUrl}" style="color:#1565C0;">${checkoutUrl}</a></p>
+      <hr style="margin:32px 0;border:none;border-top:1px solid #eee;">
+      <p style="color:#888;font-size:12px;text-align:center;">Thank you for choosing ${companyName}</p>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
 router.delete('/:id/recurring', async (c) => {
   const db = getDb(c.env.DB)
   const id = c.req.param('id')
