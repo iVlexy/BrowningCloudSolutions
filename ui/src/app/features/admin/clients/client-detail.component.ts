@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core'
 import { ActivatedRoute, RouterLink } from '@angular/router'
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatCardModule } from '@angular/material/card'
@@ -7,7 +8,10 @@ import { MatTableModule } from '@angular/material/table'
 import { MatChipsModule } from '@angular/material/chips'
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'
 import { MatDialog } from '@angular/material/dialog'
-import { MatSnackBar } from '@angular/material/snack-bar'
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar'
+import { MatInputModule } from '@angular/material/input'
+import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatSelectModule } from '@angular/material/select'
 import { DatePipe, DecimalPipe } from '@angular/common'
 import { ApiService } from '../../../core/services/api.service'
 import type { Client, Invoice } from '../../../shared/models'
@@ -16,9 +20,10 @@ import type { Client, Invoice } from '../../../shared/models'
   selector: 'app-client-detail',
   standalone: true,
   imports: [
-    RouterLink, DatePipe, DecimalPipe,
+    RouterLink, DatePipe, DecimalPipe, ReactiveFormsModule,
     MatButtonModule, MatIconModule, MatCardModule,
-    MatTableModule, MatChipsModule, MatProgressSpinnerModule,
+    MatTableModule, MatChipsModule, MatProgressSpinnerModule, MatSnackBarModule,
+    MatInputModule, MatFormFieldModule, MatSelectModule,
   ],
   template: `
     <div class="page-container">
@@ -61,6 +66,82 @@ import type { Client, Invoice } from '../../../shared/models'
           </mat-card>
 
           <!-- Invoices -->
+          <div class="right-col">
+
+          <!-- Recurring billing card -->
+          <mat-card class="recurring-card">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon class="card-icon">autorenew</mat-icon>
+                Recurring Billing
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+
+              @if (client()!.recurringActive) {
+                <!-- Active -->
+                <div class="recurring-active">
+                  <div class="recurring-status active">
+                    <mat-icon>check_circle</mat-icon>
+                    <span>Active</span>
+                  </div>
+                  <div class="recurring-details">
+                    <span class="recurring-amount">\${{ client()!.monthlyAmount | number:'1.2-2' }}/mo</span>
+                    <span class="recurring-method {{ client()!.billingMethod }}">
+                      {{ client()!.billingMethod === 'stripe' ? 'Stripe auto-charge' : 'Manual invoice' }}
+                    </span>
+                  </div>
+                  <button mat-stroked-button color="warn" (click)="cancelRecurring()" class="cancel-btn">
+                    <mat-icon>cancel</mat-icon>Cancel recurring
+                  </button>
+                </div>
+
+              } @else if (client()!.billingMethod === 'stripe' && !client()!.recurringActive) {
+                <!-- Stripe setup pending -->
+                <div class="recurring-pending">
+                  <div class="recurring-status pending">
+                    <mat-icon>hourglass_empty</mat-icon>
+                    <span>Awaiting customer card setup</span>
+                  </div>
+                  <p class="pending-hint">Share the Stripe checkout link with the customer to complete setup.</p>
+                  <div class="pending-actions">
+                    <button mat-stroked-button (click)="resendStripeSetup()">
+                      <mat-icon>link</mat-icon>Get new link
+                    </button>
+                    <button mat-stroked-button color="warn" (click)="cancelRecurring()">
+                      <mat-icon>close</mat-icon>Cancel
+                    </button>
+                  </div>
+                </div>
+
+              } @else {
+                <!-- Setup form -->
+                <form [formGroup]="recurringForm" (ngSubmit)="setupRecurring()" class="recurring-form">
+                  <mat-form-field appearance="outline" class="amount-field">
+                    <mat-label>Monthly amount ($)</mat-label>
+                    <input matInput type="number" min="1" step="0.01" formControlName="amount" placeholder="99.00" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="method-field">
+                    <mat-label>Billing method</mat-label>
+                    <mat-select formControlName="method">
+                      <mat-option value="manual">Manual (generate invoice monthly)</mat-option>
+                      <mat-option value="stripe">Stripe (auto-charge card on file)</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <button mat-flat-button type="submit" class="setup-btn" [disabled]="recurringForm.invalid || savingRecurring()">
+                    @if (savingRecurring()) { <mat-spinner diameter="18" /> }
+                    @else { <mat-icon>play_circle</mat-icon> }
+                    {{ recurringForm.value.method === 'stripe' ? 'Get Stripe setup link' : 'Activate' }}
+                  </button>
+                </form>
+              }
+
+            </mat-card-content>
+          </mat-card>
+
+          <!-- Invoices -->
           <div class="invoices-section">
             <h2>Invoices</h2>
             @if (invoices().length === 0) {
@@ -85,6 +166,7 @@ import type { Client, Invoice } from '../../../shared/models'
               </div>
             }
           </div>
+          </div><!-- /right-col -->
         </div>
       }
     </div>
@@ -113,6 +195,8 @@ import type { Client, Invoice } from '../../../shared/models'
       align-items: start;
       @media (max-width: 768px) { grid-template-columns: 1fr; }
     }
+
+    .right-col { display: flex; flex-direction: column; gap: 24px; }
 
     .info-card { border: 1px solid #e8edf2 !important; }
 
@@ -162,6 +246,43 @@ import type { Client, Invoice } from '../../../shared/models'
     .inv-date { font-size: 12px; color: #888; margin-top: 2px; }
     .inv-right { text-align: right; }
     .inv-total { font-weight: 600; font-size: 15px; margin-top: 4px; }
+
+    /* ── Recurring billing card ─────────────────────────────────── */
+    .recurring-card {
+      border: 1px solid #e8edf2 !important;
+      mat-card-title { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+      .card-icon { color: #1565C0; }
+    }
+
+    .recurring-form {
+      display: flex; flex-direction: column; gap: 12px; padding-top: 8px;
+      .amount-field, .method-field { width: 100%; }
+      .setup-btn {
+        background: #1565C0 !important; color: #fff !important;
+        display: flex; align-items: center; gap: 6px; align-self: flex-start;
+        mat-spinner { display: inline-block; }
+      }
+    }
+
+    .recurring-active, .recurring-pending { display: flex; flex-direction: column; gap: 12px; padding-top: 4px; }
+
+    .recurring-status {
+      display: flex; align-items: center; gap: 6px; font-weight: 600;
+      &.active { color: #2e7d32; }
+      &.pending { color: #e65100; }
+    }
+
+    .recurring-details { display: flex; align-items: center; gap: 12px; }
+    .recurring-amount { font-size: 20px; font-weight: 700; }
+    .recurring-method {
+      font-size: 12px; padding: 2px 8px; border-radius: 12px; font-weight: 500;
+      &.stripe { background: #ede7f6; color: #6772e5; }
+      &.manual { background: #e8f5e9; color: #2e7d32; }
+    }
+
+    .cancel-btn { align-self: flex-start; }
+    .pending-hint { font-size: 13px; color: #666; margin: 0; }
+    .pending-actions { display: flex; gap: 8px; }
   `],
 })
 export class ClientDetailComponent implements OnInit {
@@ -169,11 +290,18 @@ export class ClientDetailComponent implements OnInit {
   private api = inject(ApiService)
   private dialog = inject(MatDialog)
   private snack = inject(MatSnackBar)
+  private fb = inject(FormBuilder)
 
   id = ''
   client = signal<Client | null>(null)
   invoices = signal<Invoice[]>([])
   loading = signal(true)
+  savingRecurring = signal(false)
+
+  recurringForm = this.fb.group({
+    amount: [null as number | null, [Validators.required, Validators.min(1)]],
+    method: ['manual' as 'stripe' | 'manual', Validators.required],
+  })
 
   initials = () => {
     const name = this.client()?.name ?? ''
@@ -182,6 +310,12 @@ export class ClientDetailComponent implements OnInit {
 
   ngOnInit() {
     this.id = this.route.snapshot.paramMap.get('id') ?? ''
+    // Check if returning from Stripe subscription setup
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('subscription') === 'success') {
+      this.snack.open('Stripe subscription activated!', '', { duration: 4000 })
+      window.history.replaceState({}, '', window.location.pathname)
+    }
     this.loadClient()
     this.loadInvoices()
   }
@@ -197,6 +331,53 @@ export class ClientDetailComponent implements OnInit {
     this.api.getInvoices({ clientId: this.id }).subscribe({
       next: (data) => this.invoices.set(data),
       error: () => {},
+    })
+  }
+
+  setupRecurring() {
+    if (this.recurringForm.invalid) return
+    const { amount, method } = this.recurringForm.value
+    this.savingRecurring.set(true)
+    this.api.setupRecurring(this.id, { amount: amount!, method: method! }).subscribe({
+      next: (res) => {
+        this.savingRecurring.set(false)
+        if (res.checkoutUrl) {
+          // Copy link to clipboard and open in new tab
+          navigator.clipboard.writeText(res.checkoutUrl).catch(() => {})
+          window.open(res.checkoutUrl, '_blank')
+          this.snack.open('Stripe setup link opened & copied to clipboard', '', { duration: 5000 })
+          this.loadClient()
+        } else {
+          this.snack.open('Recurring billing activated', '', { duration: 3000 })
+          this.loadClient()
+        }
+      },
+      error: () => { this.savingRecurring.set(false); this.snack.open('Failed to set up recurring billing', 'Dismiss', { duration: 4000 }) },
+    })
+  }
+
+  resendStripeSetup() {
+    const amount = this.client()?.monthlyAmount
+    if (!amount) return
+    this.savingRecurring.set(true)
+    this.api.setupRecurring(this.id, { amount, method: 'stripe' }).subscribe({
+      next: (res) => {
+        this.savingRecurring.set(false)
+        if (res.checkoutUrl) {
+          navigator.clipboard.writeText(res.checkoutUrl).catch(() => {})
+          window.open(res.checkoutUrl, '_blank')
+          this.snack.open('New Stripe setup link opened & copied to clipboard', '', { duration: 5000 })
+        }
+      },
+      error: () => { this.savingRecurring.set(false) },
+    })
+  }
+
+  cancelRecurring() {
+    if (!confirm('Cancel recurring billing for this client?')) return
+    this.api.cancelRecurring(this.id).subscribe({
+      next: () => { this.snack.open('Recurring billing cancelled', '', { duration: 3000 }); this.loadClient() },
+      error: () => this.snack.open('Failed to cancel recurring billing', 'Dismiss', { duration: 4000 }),
     })
   }
 

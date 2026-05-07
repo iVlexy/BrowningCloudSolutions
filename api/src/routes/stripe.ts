@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { eq, and } from 'drizzle-orm'
 import { getDb } from '../db'
-import { invoices, payments } from '../db/schema'
+import { invoices, payments, clients } from '../db/schema'
 import { updateInvoicePaymentStatus } from './payments'
 import type { Env, Variables } from '../types'
 import Stripe from 'stripe'
@@ -73,29 +73,54 @@ router.post('/webhook', async (c) => {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
-    const invoiceId = session.metadata?.invoiceId
 
-    if (invoiceId && session.payment_status === 'paid') {
-      const db = getDb(c.env.DB)
-      const now = Math.floor(Date.now() / 1000)
+    if (session.mode === 'subscription') {
+      // Subscription checkout completed — activate recurring billing for the client
+      const clientId = session.metadata?.clientId
+      if (clientId) {
+        const db = getDb(c.env.DB)
+        const now = Math.floor(Date.now() / 1000)
+        const subscriptionId = typeof session.subscription === 'string' ? session.subscription : null
+        await db
+          .update(clients)
+          .set({ recurringActive: true, stripeSubscriptionId: subscriptionId, updatedAt: now })
+          .where(eq(clients.id, clientId))
+      }
+    } else {
+      // One-time invoice payment
+      const invoiceId = session.metadata?.invoiceId
+      if (invoiceId && session.payment_status === 'paid') {
+        const db = getDb(c.env.DB)
+        const now = Math.floor(Date.now() / 1000)
 
-      // Record the payment
-      await db.insert(payments).values({
-        id: crypto.randomUUID(),
-        invoiceId,
-        amount: (session.amount_total ?? 0) / 100,
-        method: 'stripe',
-        status: 'completed',
-        stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
-        stripeCheckoutSessionId: session.id,
-        checkNumber: null,
-        notes: 'Paid via Stripe Checkout',
-        paidAt: now,
-        createdAt: now,
-      })
+        await db.insert(payments).values({
+          id: crypto.randomUUID(),
+          invoiceId,
+          amount: (session.amount_total ?? 0) / 100,
+          method: 'stripe',
+          status: 'completed',
+          stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
+          stripeCheckoutSessionId: session.id,
+          checkNumber: null,
+          notes: 'Paid via Stripe Checkout',
+          paidAt: now,
+          createdAt: now,
+        })
 
-      await updateInvoicePaymentStatus(db, invoiceId, null)
+        await updateInvoicePaymentStatus(db, invoiceId, null)
+      }
     }
+  }
+
+  if (event.type === 'customer.subscription.deleted') {
+    // Stripe subscription cancelled (from Stripe side) — deactivate recurring billing
+    const sub = event.data.object as Stripe.Subscription
+    const db = getDb(c.env.DB)
+    const now = Math.floor(Date.now() / 1000)
+    await db
+      .update(clients)
+      .set({ recurringActive: false, stripeSubscriptionId: null, updatedAt: now })
+      .where(eq(clients.stripeSubscriptionId, sub.id))
   }
 
   return c.json({ received: true })

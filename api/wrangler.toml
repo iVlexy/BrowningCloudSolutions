@@ -13,3 +13,6 @@ CF_TEAM_DOMAIN = "browningcloudsolutions"
 FRONTEND_URL = "https://browningcloud.com"
 FROM_EMAIL = "invoices@browningcloud.com"
 COMPANY_NAME = "Browning Cloud Solutions"
+
+[triggers]
+crons = ["0 8 1 * *"]

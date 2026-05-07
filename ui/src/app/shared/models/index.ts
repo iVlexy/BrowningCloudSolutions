@@ -7,6 +7,11 @@ export interface Client {
   company?: string | null
   address?: string | null
   notes?: string | null
+  monthlyAmount?: number | null
+  billingMethod?: 'stripe' | 'manual' | null
+  recurringActive?: boolean
+  stripeCustomerId?: string | null
+  stripeSubscriptionId?: string | null
   createdAt: number
   updatedAt: number
 }

@@ -10,8 +10,12 @@ export const clients = sqliteTable('clients', {
   company: text('company'),
   address: text('address'),
   notes: text('notes'),
-  isDeleted: integer('is_deleted', { mode: 'boolean' }).default(false).notNull(),
-  createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
+  isDeleted: integer('is_deleted', { mode: 'boolean' }).default(false).notNull(),  // ─── Recurring billing ──────────────────────────────────────────────────────
+  monthlyAmount: real('monthly_amount'),
+  billingMethod: text('billing_method'), // 'stripe' | 'manual' | null
+  recurringActive: integer('recurring_active', { mode: 'boolean' }).default(false).notNull(),
+  stripeCustomerId: text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),  createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
   updatedAt: integer('updated_at').default(sql`(unixepoch())`).notNull(),
 })
 

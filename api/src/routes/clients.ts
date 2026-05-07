@@ -3,6 +3,7 @@ import { eq, and, desc, sql, like, or } from 'drizzle-orm'
 import { getDb } from '../db'
 import { clients } from '../db/schema'
 import type { Env, Variables } from '../types'
+import Stripe from 'stripe'
 
 const router = new Hono<{ Bindings: Env; Variables: Variables }>()
 
@@ -113,6 +114,94 @@ router.delete('/:id', async (c) => {
   await db
     .update(clients)
     .set({ isDeleted: true, updatedAt: Math.floor(Date.now() / 1000) })
+    .where(eq(clients.id, id))
+
+  return c.json({ success: true })
+})
+
+// ─── Recurring billing ────────────────────────────────────────────────────────
+
+router.post('/:id/recurring/setup', async (c) => {
+  const db = getDb(c.env.DB)
+  const id = c.req.param('id')
+  const body = await c.req.json<{ amount: number; method: 'stripe' | 'manual' }>()
+
+  const client = await db
+    .select()
+    .from(clients)
+    .where(and(eq(clients.id, id), eq(clients.isDeleted, false)))
+    .get()
+
+  if (!client) return c.json({ error: 'Client not found' }, 404)
+
+  const now = Math.floor(Date.now() / 1000)
+
+  if (body.method === 'manual') {
+    await db
+      .update(clients)
+      .set({ monthlyAmount: body.amount, billingMethod: 'manual', recurringActive: true, updatedAt: now })
+      .where(eq(clients.id, id))
+    return c.json({ success: true })
+  }
+
+  // Stripe subscription — create Checkout Session
+  const stripe = new Stripe(c.env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() })
+
+  let stripeCustomerId = client.stripeCustomerId
+  if (!stripeCustomerId) {
+    const customer = await stripe.customers.create({ email: client.email, name: client.name })
+    stripeCustomerId = customer.id
+  }
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    customer: stripeCustomerId,
+    line_items: [{
+      price_data: {
+        currency: 'usd',
+        product_data: { name: 'Monthly Service Fee' },
+        unit_amount: Math.round(body.amount * 100),
+        recurring: { interval: 'month' },
+      },
+      quantity: 1,
+    }],
+    metadata: { clientId: id },
+    success_url: `${c.env.FRONTEND_URL}/admin/clients/${id}?subscription=success`,
+    cancel_url: `${c.env.FRONTEND_URL}/admin/clients/${id}`,
+  })
+
+  // Save config but leave recurringActive=false until webhook confirms
+  await db
+    .update(clients)
+    .set({ monthlyAmount: body.amount, billingMethod: 'stripe', stripeCustomerId, updatedAt: now })
+    .where(eq(clients.id, id))
+
+  return c.json({ checkoutUrl: session.url })
+})
+
+router.delete('/:id/recurring', async (c) => {
+  const db = getDb(c.env.DB)
+  const id = c.req.param('id')
+
+  const client = await db
+    .select()
+    .from(clients)
+    .where(and(eq(clients.id, id), eq(clients.isDeleted, false)))
+    .get()
+
+  if (!client) return c.json({ error: 'Client not found' }, 404)
+
+  if (client.stripeSubscriptionId) {
+    const stripe = new Stripe(c.env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() })
+    try {
+      await stripe.subscriptions.cancel(client.stripeSubscriptionId)
+    } catch { /* already cancelled */ }
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  await db
+    .update(clients)
+    .set({ recurringActive: false, billingMethod: null, monthlyAmount: null, stripeSubscriptionId: null, updatedAt: now })
     .where(eq(clients.id, id))
 
   return c.json({ success: true })

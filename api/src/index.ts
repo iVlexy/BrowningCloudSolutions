@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
+import { eq, and, like, sql } from 'drizzle-orm'
 import { clientsRouter } from './routes/clients'
 import { invoicesRouter } from './routes/invoices'
 import { paymentsRouter } from './routes/payments'
@@ -8,6 +9,8 @@ import { servicesRouter } from './routes/services'
 import { contactRouter } from './routes/contact'
 import { stripeRouter } from './routes/stripe'
 import { authMiddleware } from './middleware/auth'
+import { getDb } from './db'
+import { clients, invoices, invoiceItems } from './db/schema'
 import type { Env, Variables } from './types'
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -66,4 +69,65 @@ app.get('/health', (c) => c.json({ ok: true, ts: Date.now() }))
 
 app.notFound((c) => c.json({ error: 'Not found' }, 404))
 
-export default app
+// ─── Monthly billing cron ─────────────────────────────────────────────────────
+async function handleMonthlyBilling(env: Env) {
+  const db = getDb(env.DB)
+  const now = Math.floor(Date.now() / 1000)
+
+  const recurringClients = await db
+    .select()
+    .from(clients)
+    .where(and(eq(clients.billingMethod, 'manual'), eq(clients.recurringActive, true), eq(clients.isDeleted, false)))
+
+  const date = new Date()
+  const monthName = date.toLocaleString('en-US', { month: 'long' })
+  const year = date.getFullYear()
+  const prefix = `INV-${year}-`
+
+  for (const client of recurringClients) {
+    const countResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(invoices)
+      .where(like(invoices.invoiceNumber, `${prefix}%`))
+    const nextNum = (countResult[0]?.count ?? 0) + 1
+    const invoiceNumber = `${prefix}${String(nextNum).padStart(4, '0')}`
+    const amount = client.monthlyAmount ?? 0
+
+    const invoice = {
+      id: crypto.randomUUID(),
+      invoiceNumber,
+      clientId: client.id,
+      status: 'sent' as const,
+      dueDate: null,
+      notes: `Auto-generated monthly invoice for ${monthName} ${year}`,
+      subtotal: amount,
+      taxRate: 0,
+      taxAmount: 0,
+      total: amount,
+      paymentToken: crypto.randomUUID().replace(/-/g, ''),
+      sentAt: now,
+      paidAt: null,
+      isDeleted: false,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await db.insert(invoices).values(invoice)
+    await db.insert(invoiceItems).values({
+      id: crypto.randomUUID(),
+      invoiceId: invoice.id,
+      description: `Monthly Service Fee — ${monthName} ${year}`,
+      quantity: 1,
+      unitPrice: amount,
+      amount,
+      sortOrder: 0,
+    })
+  }
+}
+
+export default {
+  fetch: app.fetch.bind(app),
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(handleMonthlyBilling(env))
+  },
+}
