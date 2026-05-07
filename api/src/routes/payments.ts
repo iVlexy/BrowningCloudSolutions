@@ -6,7 +6,6 @@ import type { Env, Variables } from '../types'
 
 const router = new Hono<{ Bindings: Env; Variables: Variables }>()
 
-// ─── List ─────────────────────────────────────────────────────────────────────
 router.get('/', async (c) => {
   const db = getDb(c.env.DB)
   const invoiceId = c.req.query('invoiceId')
@@ -24,7 +23,6 @@ router.get('/', async (c) => {
   return c.json(result)
 })
 
-// ─── Record cash / check payment ─────────────────────────────────────────────
 router.post('/', async (c) => {
   const db = getDb(c.env.DB)
   const body = await c.req.json<{
@@ -60,14 +58,11 @@ router.post('/', async (c) => {
   }
 
   await db.insert(payments).values(payment)
-
-  // Update invoice status
   await updateInvoicePaymentStatus(db, body.invoiceId, invoice.total)
 
   return c.json(payment, 201)
 })
 
-// ─── Refund / void a payment ──────────────────────────────────────────────────
 router.delete('/:id', async (c) => {
   const db = getDb(c.env.DB)
   const id = c.req.param('id')
@@ -79,18 +74,33 @@ router.delete('/:id', async (c) => {
     .get()
 
   if (!payment) return c.json({ error: 'Not found' }, 404)
+  if (payment.status === 'refunded') return c.json({ error: 'Already refunded' }, 400)
 
-  await db
-    .update(payments)
-    .set({ status: 'refunded' })
-    .where(eq(payments.id, id))
+  let stripeRefunded = false
 
+  // If paid via Stripe, issue a refund before marking in DB
+  if (payment.stripePaymentIntentId && c.env.STRIPE_SECRET_KEY) {
+    const res = await fetch('https://api.stripe.com/v1/refunds', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${c.env.STRIPE_SECRET_KEY}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `payment_intent=${payment.stripePaymentIntentId}`,
+    })
+    const data = await res.json<{ id?: string; error?: { message: string } }>()
+    if (!res.ok || !data.id) {
+      return c.json({ error: `Stripe refund failed: ${data.error?.message ?? 'unknown'}` }, 502)
+    }
+    stripeRefunded = true
+  }
+
+  await db.update(payments).set({ status: 'refunded' }).where(eq(payments.id, id))
   await updateInvoicePaymentStatus(db, payment.invoiceId, null)
 
-  return c.json({ success: true })
+  return c.json({ success: true, stripeRefunded })
 })
 
-// ─── Helper: recalculate invoice payment status ───────────────────────────────
 async function updateInvoicePaymentStatus(
   db: ReturnType<typeof getDb>,
   invoiceId: string,
@@ -111,21 +121,13 @@ async function updateInvoicePaymentStatus(
   const now = Math.floor(Date.now() / 1000)
 
   let status: string
-  if (amountPaid <= 0) {
-    status = 'sent'
-  } else if (amountPaid < invoice.total) {
-    status = 'partial'
-  } else {
-    status = 'paid'
-  }
+  if (amountPaid <= 0) status = 'sent'
+  else if (amountPaid < invoice.total) status = 'partial'
+  else status = 'paid'
 
   await db
     .update(invoices)
-    .set({
-      status,
-      paidAt: status === 'paid' ? now : null,
-      updatedAt: now,
-    })
+    .set({ status, paidAt: status === 'paid' ? now : null, updatedAt: now })
     .where(eq(invoices.id, invoiceId))
 }
 

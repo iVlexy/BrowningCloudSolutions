@@ -43,6 +43,7 @@ import type { Payment } from '../../../shared/models'
               <td mat-cell *matCellDef="let p">
                 <span class="method-chip {{ p.method }}">{{ p.method }}</span>
                 @if (p.checkNumber) { <div class="sub-text">Check #{{ p.checkNumber }}</div> }
+                @if (p.stripePaymentIntentId) { <div class="sub-text stripe-id">Stripe</div> }
               </td>
             </ng-container>
 
@@ -105,6 +106,7 @@ import type { Payment } from '../../../shared/models'
     .table-card { background: #fff; border-radius: 12px; border: 1px solid #e8edf2; overflow: hidden; }
     .inv-link { color: #1565C0; text-decoration: none; font-weight: 500; &:hover { text-decoration: underline; } }
     .sub-text { font-size: 12px; color: #888; }
+    .stripe-id { color: #6772e5; font-weight: 500; }
     .num-col { text-align: right; }
     .amount-cell { font-weight: 600; &.refunded { color: #c62828; } }
     .no-data { text-align: center; padding: 48px !important; color: #888; }
@@ -129,10 +131,21 @@ export class PaymentsComponent implements OnInit {
   }
 
   voidPayment(payment: Payment) {
-    if (!confirm('Mark this payment as refunded/voided?')) return
+    const isStripe = !!payment.stripePaymentIntentId
+    const msg = isStripe
+      ? 'This will issue a full refund on Stripe and mark the payment as refunded. Continue?'
+      : 'Mark this payment as voided/refunded?'
+    if (!confirm(msg)) return
     this.api.deletePayment(payment.id).subscribe({
-      next: () => { this.snack.open('Payment voided', '', { duration: 2500 }); this.load() },
-      error: () => this.snack.open('Failed to void payment', 'Dismiss', { duration: 3000 }),
+      next: (res: any) => {
+        const label = res.stripeRefunded ? 'Payment refunded on Stripe' : 'Payment voided'
+        this.snack.open(label, '', { duration: 3000 })
+        this.load()
+      },
+      error: (err: any) => {
+        const msg = err.error?.error ?? 'Failed to void payment'
+        this.snack.open(msg, 'Dismiss', { duration: 5000 })
+      },
     })
   }
 }
