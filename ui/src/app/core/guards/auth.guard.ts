@@ -1,16 +1,13 @@
 import { inject } from '@angular/core'
-import { CanActivateFn, Router } from '@angular/router'
+import { CanActivateFn } from '@angular/router'
 import { AuthService } from '../services/auth.service'
 
 export const authGuard: CanActivateFn = async () => {
   const auth = inject(AuthService)
-  const router = inject(Router)
 
   const ok = await auth.checkAuth()
   if (!ok) {
-    // Redirect to CF Access login — the browser will be redirected there automatically
-    // by CF Access if the cookie is missing. This is a fallback.
-    router.navigate(['/'])
+    window.location.href = `https://browningcloudsolutions.cloudflareaccess.com/cdn-cgi/access/login/${window.location.hostname}?redirect_url=${encodeURIComponent(window.location.href)}`
     return false
   }
   return true

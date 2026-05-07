@@ -9,7 +9,7 @@ database_name = "bcs-db"
 database_id = "5b1a6c12-5863-489e-a8b6-897e71716747"
 
 [vars]
-CF_TEAM_DOMAIN = "browningcloud"
+CF_TEAM_DOMAIN = "browningcloudsolutions"
 FRONTEND_URL = "https://browningcloud.com"
 FROM_EMAIL = "invoices@browningcloud.com"
 COMPANY_NAME = "Browning Cloud Solutions"
