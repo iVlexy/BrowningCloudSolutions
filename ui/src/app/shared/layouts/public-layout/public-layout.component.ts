@@ -13,15 +13,25 @@ import { MatIconModule } from '@angular/material/icon'
       <div class="header-inner">
         <a routerLink="/" class="brand">
           <mat-icon>cloud</mat-icon>
-          <span>Browning Cloud Solutions</span>
+          <span class="brand-full">Browning Cloud Solutions</span>
+          <span class="brand-short">BCS</span>
         </a>
         <nav class="nav-links">
-          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Home</a>
-          <a routerLink="/services" routerLinkActive="active">Services</a>
-          <a routerLink="/contact" routerLinkActive="active">Contact</a>
-          <a routerLink="/admin" class="admin-link">
+          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" title="Home">
+            <mat-icon class="nav-icon">home</mat-icon>
+            <span class="nav-label">Home</span>
+          </a>
+          <a routerLink="/services" routerLinkActive="active" title="Services">
+            <mat-icon class="nav-icon">design_services</mat-icon>
+            <span class="nav-label">Services</span>
+          </a>
+          <a routerLink="/contact" routerLinkActive="active" title="Contact">
+            <mat-icon class="nav-icon">mail</mat-icon>
+            <span class="nav-label">Contact</span>
+          </a>
+          <a routerLink="/admin" class="admin-link" title="Admin">
             <mat-icon>dashboard</mat-icon>
-            Admin
+            <span class="nav-label">Admin</span>
           </a>
         </nav>
       </div>
@@ -62,8 +72,10 @@ import { MatIconModule } from '@angular/material/icon'
       font-weight: 700;
       color: #1565C0;
       text-decoration: none;
+      white-space: nowrap;
 
       mat-icon { color: #1565C0; }
+      .brand-short { display: none; }
     }
 
     .nav-links {
@@ -72,6 +84,9 @@ import { MatIconModule } from '@angular/material/icon'
       gap: 28px;
 
       a {
+        display: flex;
+        align-items: center;
+        gap: 4px;
         font-size: 15px;
         font-weight: 500;
         color: #555;
@@ -81,10 +96,9 @@ import { MatIconModule } from '@angular/material/icon'
         &:hover, &.active { color: #1565C0; }
       }
 
+      .nav-icon { display: none; font-size: 20px; width: 20px; height: 20px; }
+
       .admin-link {
-        display: flex;
-        align-items: center;
-        gap: 4px;
         background: #1565C0;
         color: #fff !important;
         padding: 6px 16px;
@@ -93,6 +107,35 @@ import { MatIconModule } from '@angular/material/icon'
 
         &:hover { background: #0d47a1; }
         mat-icon { font-size: 18px; height: 18px; width: 18px; }
+      }
+    }
+
+    @media (max-width: 600px) {
+      .header-inner { padding: 0 12px; }
+
+      .brand {
+        font-size: 16px;
+        .brand-full { display: none; }
+        .brand-short { display: inline; }
+      }
+
+      .nav-links {
+        gap: 4px;
+
+        a {
+          padding: 8px;
+          border-radius: 8px;
+        }
+
+        .nav-label { display: none; }
+        .nav-icon { display: block; }
+
+        .admin-link {
+          padding: 8px;
+          border-radius: 8px;
+          .nav-label { display: none; }
+          mat-icon { font-size: 20px; width: 20px; height: 20px; margin: 0; }
+        }
       }
     }
 
