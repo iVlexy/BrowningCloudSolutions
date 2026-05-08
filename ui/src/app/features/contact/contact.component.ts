@@ -210,7 +210,6 @@ export class ContactComponent {
   })
 
   infoItems = [
-    { icon: 'email', label: 'Email', value: 'hello@browningcloud.com' },
     { icon: 'schedule', label: 'Response Time', value: 'Within 24 hours' },
     { icon: 'location_on', label: 'Location', value: 'Remote — serving clients nationwide' },
   ]
