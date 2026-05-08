@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core'
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { MatTableModule } from '@angular/material/table'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
@@ -26,8 +27,14 @@ import type { ContactRequest } from '../../../shared/models'
         </div>
       </div>
 
-      @if (loading()) {
+      @if (loading() && requests().length === 0) {
         <div class="loading-row"><mat-spinner diameter="32" /></div>
+      } @else if (error() && requests().length === 0) {
+        <div class="error-row">
+          <mat-icon>error_outline</mat-icon>
+          <span>Failed to load. Check your connection.</span>
+          <button mat-stroked-button (click)="load()">Retry</button>
+        </div>
       } @else {
         <div class="requests-list">
           @for (req of requests(); track req.id) {
@@ -73,6 +80,7 @@ import type { ContactRequest } from '../../../shared/models'
   `,
   styles: [`
     .loading-row { display: flex; justify-content: center; padding: 48px; }
+    .error-row { display: flex; align-items: center; gap: 12px; padding: 48px; justify-content: center; color: #c62828; button { margin-left: 8px; } }
 
     .requests-list { display: flex; flex-direction: column; gap: 12px; }
 
@@ -118,18 +126,21 @@ import type { ContactRequest } from '../../../shared/models'
 export class ContactRequestsComponent implements OnInit {
   private api = inject(ApiService)
   private snack = inject(MatSnackBar)
+  private destroyRef = inject(DestroyRef)
 
   requests = signal<ContactRequest[]>([])
   loading = signal(true)
+  error = signal(false)
   unreadCount = () => this.requests().filter((r) => !r.isRead).length
 
   ngOnInit() { this.load() }
 
   load() {
     this.loading.set(true)
-    this.api.getContactRequests().subscribe({
+    this.error.set(false)
+    this.api.getContactRequests().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => { this.requests.set(data); this.loading.set(false) },
-      error: () => this.loading.set(false),
+      error: () => { this.loading.set(false); this.error.set(true) },
     })
   }
 

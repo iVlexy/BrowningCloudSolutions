@@ -1,6 +1,7 @@
-import { Component, inject, OnInit, signal } from '@angular/core'
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core'
 import { RouterLink } from '@angular/router'
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { MatTableModule } from '@angular/material/table'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
@@ -44,8 +45,14 @@ import type { Client } from '../../../shared/models'
         </mat-form-field>
       </div>
 
-      @if (loading()) {
+      @if (loading() && clients().length === 0) {
         <div class="loading-row"><mat-spinner diameter="32" /></div>
+      } @else if (error() && clients().length === 0) {
+        <div class="error-row">
+          <mat-icon>error_outline</mat-icon>
+          <span>Failed to load. Check your connection.</span>
+          <button mat-stroked-button (click)="load()">Retry</button>
+        </div>
       } @else {
         <div class="table-card">
           <table mat-table [dataSource]="clients()" class="mat-elevation-z0">
@@ -113,6 +120,7 @@ import type { Client } from '../../../shared/models'
     .search-field { width: 360px; max-width: 100%; }
 
     .loading-row { display: flex; justify-content: center; padding: 48px; }
+    .error-row { display: flex; align-items: center; gap: 12px; padding: 48px; justify-content: center; color: #c62828; button { margin-left: 8px; } }
 
     .table-card {
       background: #fff;
@@ -136,18 +144,21 @@ export class ClientsComponent implements OnInit {
   private api = inject(ApiService)
   private dialog = inject(MatDialog)
   private snack = inject(MatSnackBar)
+  private destroyRef = inject(DestroyRef)
 
   clients = signal<Client[]>([])
   loading = signal(true)
+  error = signal(false)
   cols = ['name', 'email', 'phone', 'createdAt', 'actions']
 
   ngOnInit() { this.load() }
 
   load(search?: string) {
     this.loading.set(true)
-    this.api.getClients(search).subscribe({
+    this.error.set(false)
+    this.api.getClients(search).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => { this.clients.set(data); this.loading.set(false) },
-      error: () => this.loading.set(false),
+      error: () => { this.loading.set(false); this.error.set(true) },
     })
   }
 

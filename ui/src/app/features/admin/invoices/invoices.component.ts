@@ -1,5 +1,6 @@
-import { Component, inject, OnInit, signal } from '@angular/core'
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core'
 import { RouterLink } from '@angular/router'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { MatTableModule } from '@angular/material/table'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
@@ -44,8 +45,14 @@ import type { Invoice, InvoiceStatus } from '../../../shared/models'
         </mat-form-field>
       </div>
 
-      @if (loading()) {
+      @if (loading() && invoices().length === 0) {
         <div class="loading-row"><mat-spinner diameter="32" /></div>
+      } @else if (error() && invoices().length === 0) {
+        <div class="error-row">
+          <mat-icon>error_outline</mat-icon>
+          <span>Failed to load. Check your connection.</span>
+          <button mat-stroked-button (click)="load()">Retry</button>
+        </div>
       } @else {
         <div class="table-card">
           <table mat-table [dataSource]="invoices()">
@@ -124,6 +131,7 @@ import type { Invoice, InvoiceStatus } from '../../../shared/models'
     .filter-field { width: 220px; max-width: 100%; }
 
     .loading-row { display: flex; justify-content: center; padding: 48px; }
+    .error-row { display: flex; align-items: center; gap: 12px; padding: 48px; justify-content: center; color: #c62828; button { margin-left: 8px; } }
 
     .table-card {
       background: #fff; border-radius: 12px; border: 1px solid #e8edf2; overflow-x: auto;
@@ -144,9 +152,11 @@ import type { Invoice, InvoiceStatus } from '../../../shared/models'
 export class InvoicesComponent implements OnInit {
   private api = inject(ApiService)
   private snack = inject(MatSnackBar)
+  private destroyRef = inject(DestroyRef)
 
   invoices = signal<Invoice[]>([])
   loading = signal(true)
+  error = signal(false)
   statusFilter = ''
   statuses: InvoiceStatus[] = ['draft', 'sent', 'partial', 'paid', 'overdue', 'cancelled']
   cols = ['number', 'client', 'status', 'dueDate', 'total', 'actions']
@@ -155,9 +165,10 @@ export class InvoicesComponent implements OnInit {
 
   load() {
     this.loading.set(true)
-    this.api.getInvoices(this.statusFilter ? { status: this.statusFilter } : undefined).subscribe({
+    this.error.set(false)
+    this.api.getInvoices(this.statusFilter ? { status: this.statusFilter } : undefined).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => { this.invoices.set(data); this.loading.set(false) },
-      error: () => this.loading.set(false),
+      error: () => { this.loading.set(false); this.error.set(true) },
     })
   }
 
