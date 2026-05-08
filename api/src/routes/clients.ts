@@ -124,7 +124,7 @@ router.delete('/:id', async (c) => {
 router.post('/:id/recurring/setup', async (c) => {
   const db = getDb(c.env.DB)
   const id = c.req.param('id')
-  const body = await c.req.json<{ amount: number; method: 'stripe' | 'manual' }>()
+  const body = await c.req.json<{ amount: number; method: 'stripe' | 'manual'; startDate?: string }>()
 
   const client = await db
     .select()
@@ -135,11 +135,21 @@ router.post('/:id/recurring/setup', async (c) => {
   if (!client) return c.json({ error: 'Client not found' }, 404)
 
   const now = Math.floor(Date.now() / 1000)
+  // startDate is an ISO date string (YYYY-MM-DD); null/undefined means start immediately
+  const startTs = body.startDate ? Math.floor(new Date(body.startDate).getTime() / 1000) : null
+  const isFuture = startTs && startTs > now
 
   if (body.method === 'manual') {
     await db
       .update(clients)
-      .set({ monthlyAmount: body.amount, billingMethod: 'manual', recurringActive: true, updatedAt: now })
+      .set({
+        monthlyAmount: body.amount,
+        billingMethod: 'manual',
+        // If future start date, stay inactive until the cron reaches that month
+        recurringActive: !isFuture,
+        recurringStartDate: startTs,
+        updatedAt: now,
+      })
       .where(eq(clients.id, id))
     return c.json({ success: true })
   }
@@ -153,7 +163,7 @@ router.post('/:id/recurring/setup', async (c) => {
     stripeCustomerId = customer.id
   }
 
-  const session = await stripe.checkout.sessions.create({
+  const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
     mode: 'subscription',
     customer: stripeCustomerId,
     line_items: [{
@@ -168,12 +178,19 @@ router.post('/:id/recurring/setup', async (c) => {
     metadata: { clientId: id },
     success_url: `${c.env.FRONTEND_URL}/admin/clients/${id}?subscription=success`,
     cancel_url: `${c.env.FRONTEND_URL}/admin/clients/${id}`,
-  })
+  }
+
+  // Delay first charge by using trial_end = start date
+  if (isFuture) {
+    sessionParams.subscription_data = { trial_end: startTs }
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionParams)
 
   // Save config but leave recurringActive=false until webhook confirms
   await db
     .update(clients)
-    .set({ monthlyAmount: body.amount, billingMethod: 'stripe', stripeCustomerId, updatedAt: now })
+    .set({ monthlyAmount: body.amount, billingMethod: 'stripe', stripeCustomerId, recurringStartDate: startTs, updatedAt: now })
     .where(eq(clients.id, id))
 
   return c.json({ checkoutUrl: session.url })

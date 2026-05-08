@@ -12,6 +12,7 @@ export interface Client {
   recurringActive?: boolean
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
+  recurringStartDate?: number | null
   createdAt: number
   updatedAt: number
 }

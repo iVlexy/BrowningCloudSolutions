@@ -12,6 +12,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar'
 import { MatInputModule } from '@angular/material/input'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatSelectModule } from '@angular/material/select'
+import { MatDatepickerModule } from '@angular/material/datepicker'
+import { MatNativeDateModule } from '@angular/material/core'
 import { DatePipe, DecimalPipe } from '@angular/common'
 import { ApiService } from '../../../core/services/api.service'
 import type { Client, Invoice } from '../../../shared/models'
@@ -23,7 +25,7 @@ import type { Client, Invoice } from '../../../shared/models'
     RouterLink, DatePipe, DecimalPipe, ReactiveFormsModule,
     MatButtonModule, MatIconModule, MatCardModule,
     MatTableModule, MatChipsModule, MatProgressSpinnerModule, MatSnackBarModule,
-    MatInputModule, MatFormFieldModule, MatSelectModule,
+    MatInputModule, MatFormFieldModule, MatSelectModule, MatDatepickerModule, MatNativeDateModule,
   ],
   template: `
     <div class="page-container">
@@ -131,6 +133,14 @@ import type { Client, Invoice } from '../../../shared/models'
                       <mat-option value="manual">Manual (generate invoice monthly)</mat-option>
                       <mat-option value="stripe">Stripe (auto-charge card on file)</mat-option>
                     </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="start-date-field">
+                    <mat-label>Start date (optional)</mat-label>
+                    <input matInput [matDatepicker]="picker" formControlName="startDate" [min]="tomorrow" placeholder="Start immediately" />
+                    <mat-hint>Leave blank to start immediately</mat-hint>
+                    <mat-datepicker-toggle matIconSuffix [for]="picker" />
+                    <mat-datepicker #picker />
                   </mat-form-field>
 
                   <button mat-flat-button type="submit" class="setup-btn" [disabled]="recurringForm.invalid || savingRecurring()">
@@ -259,7 +269,7 @@ import type { Client, Invoice } from '../../../shared/models'
 
     .recurring-form {
       display: flex; flex-direction: column; gap: 12px; padding-top: 8px;
-      .amount-field, .method-field { width: 100%; }
+      .amount-field, .method-field, .start-date-field { width: 100%; }
       .setup-btn {
         background: #1565C0 !important; color: #fff !important;
         display: flex; align-items: center; gap: 6px; align-self: flex-start;
@@ -305,7 +315,10 @@ export class ClientDetailComponent implements OnInit {
   recurringForm = this.fb.group({
     amount: [null as number | null, [Validators.required, Validators.min(1)]],
     method: ['manual' as 'stripe' | 'manual', Validators.required],
+    startDate: [null as Date | null],
   })
+
+  tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(0,0,0,0); return d })()
 
   initials = () => {
     const name = this.client()?.name ?? ''
@@ -340,9 +353,11 @@ export class ClientDetailComponent implements OnInit {
 
   setupRecurring() {
     if (this.recurringForm.invalid) return
-    const { amount, method } = this.recurringForm.value
+    const { amount, method, startDate } = this.recurringForm.value
+    // Format date as YYYY-MM-DD for the backend
+    const startDateStr = startDate ? (startDate as Date).toISOString().slice(0, 10) : undefined
     this.savingRecurring.set(true)
-    this.api.setupRecurring(this.id, { amount: amount!, method: method! }).subscribe({
+    this.api.setupRecurring(this.id, { amount: amount!, method: method!, startDate: startDateStr }).subscribe({
       next: (res) => {
         this.savingRecurring.set(false)
         if (res.checkoutUrl) {

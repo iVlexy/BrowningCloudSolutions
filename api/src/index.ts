@@ -74,6 +74,21 @@ async function handleMonthlyBilling(env: Env) {
   const db = getDb(env.DB)
   const now = Math.floor(Date.now() / 1000)
 
+  // Activate any manual-billing clients whose future start date has now arrived
+  const pendingClients = await db
+    .select()
+    .from(clients)
+    .where(and(
+      eq(clients.billingMethod, 'manual'),
+      eq(clients.recurringActive, false),
+      eq(clients.isDeleted, false),
+      sql`${clients.recurringStartDate} IS NOT NULL AND ${clients.recurringStartDate} <= ${now}`
+    ))
+
+  for (const client of pendingClients) {
+    await db.update(clients).set({ recurringActive: true, updatedAt: now }).where(eq(clients.id, client.id))
+  }
+
   const recurringClients = await db
     .select()
     .from(clients)

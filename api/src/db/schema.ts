@@ -15,7 +15,9 @@ export const clients = sqliteTable('clients', {
   billingMethod: text('billing_method'), // 'stripe' | 'manual' | null
   recurringActive: integer('recurring_active', { mode: 'boolean' }).default(false).notNull(),
   stripeCustomerId: text('stripe_customer_id'),
-  stripeSubscriptionId: text('stripe_subscription_id'),  createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  recurringStartDate: integer('recurring_start_date'), // unix timestamp, null = start immediately
+  createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
   updatedAt: integer('updated_at').default(sql`(unixepoch())`).notNull(),
 })
 
