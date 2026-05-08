@@ -1,6 +1,5 @@
-import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core'
+import { Component, inject, OnInit, signal } from '@angular/core'
 import { RouterLink } from '@angular/router'
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { MatTableModule } from '@angular/material/table'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
@@ -27,14 +26,8 @@ import type { Payment } from '../../../shared/models'
         </div>
       </div>
 
-      @if (loading() && payments().length === 0) {
+      @if (loading()) {
         <div class="loading-row"><mat-spinner diameter="32" /></div>
-      } @else if (error() && payments().length === 0) {
-        <div class="error-row">
-          <mat-icon>error_outline</mat-icon>
-          <span>Failed to load. Check your connection.</span>
-          <button mat-stroked-button (click)="load()">Retry</button>
-        </div>
       } @else {
         <div class="table-card">
           <table mat-table [dataSource]="payments()">
@@ -104,7 +97,6 @@ import type { Payment } from '../../../shared/models'
   `,
   styles: [`
     .loading-row { display: flex; justify-content: center; padding: 48px; }
-    .error-row { display: flex; align-items: center; gap: 12px; padding: 48px; justify-content: center; color: #c62828; button { margin-left: 8px; } }
     .table-card { background: #fff; border-radius: 12px; border: 1px solid #e8edf2; overflow-x: auto; }
     .inv-link { color: #1565C0; text-decoration: none; font-weight: 500; &:hover { text-decoration: underline; } }
     .sub-text { font-size: 12px; color: #888; }
@@ -121,21 +113,18 @@ import type { Payment } from '../../../shared/models'
 export class PaymentsComponent implements OnInit {
   private api = inject(ApiService)
   private snack = inject(MatSnackBar)
-  private destroyRef = inject(DestroyRef)
 
   payments = signal<Payment[]>([])
   loading = signal(true)
-  error = signal(false)
   cols = ['invoice', 'method', 'status', 'amount', 'paidAt', 'notes', 'actions']
 
   ngOnInit() { this.load() }
 
   load() {
     this.loading.set(true)
-    this.error.set(false)
-    this.api.getPayments().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.api.getPayments().subscribe({
       next: (data) => { this.payments.set(data); this.loading.set(false) },
-      error: () => { this.loading.set(false); this.error.set(true) },
+      error: () => this.loading.set(false),
     })
   }
 

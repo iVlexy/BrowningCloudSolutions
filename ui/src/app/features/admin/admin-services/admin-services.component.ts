@@ -1,6 +1,5 @@
-import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core'
+import { Component, inject, OnInit, signal } from '@angular/core'
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms'
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { MatTableModule } from '@angular/material/table'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
@@ -35,14 +34,8 @@ import type { Service } from '../../../shared/models'
         </button>
       </div>
 
-      @if (loading() && services().length === 0) {
+      @if (loading()) {
         <div class="loading-row"><mat-spinner diameter="32" /></div>
-      } @else if (error() && services().length === 0) {
-        <div class="error-row">
-          <mat-icon>error_outline</mat-icon>
-          <span>Failed to load. Check your connection.</span>
-          <button mat-stroked-button (click)="load()">Retry</button>
-        </div>
       } @else {
         <div class="table-card">
           <table mat-table [dataSource]="services()">
@@ -99,7 +92,6 @@ import type { Service } from '../../../shared/models'
 
     .add-btn { background: #1565C0 !important; color: #fff !important; }
     .loading-row { display: flex; justify-content: center; padding: 48px; }
-    .error-row { display: flex; align-items: center; gap: 12px; padding: 48px; justify-content: center; color: #c62828; button { margin-left: 8px; } }
     .table-card { background: #fff; border-radius: 12px; border: 1px solid #e8edf2; overflow: hidden; }
     .sub-text { font-size: 12px; color: #888; max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .no-data { text-align: center; padding: 48px !important; color: #888; }
@@ -109,21 +101,18 @@ export class AdminServicesComponent implements OnInit {
   private api = inject(ApiService)
   private dialog = inject(MatDialog)
   private snack = inject(MatSnackBar)
-  private destroyRef = inject(DestroyRef)
 
   services = signal<Service[]>([])
   loading = signal(true)
-  error = signal(false)
   cols = ['name', 'price', 'active', 'actions']
 
   ngOnInit() { this.load() }
 
   load() {
     this.loading.set(true)
-    this.error.set(false)
-    this.api.getAllServices().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.api.getAllServices().subscribe({
       next: (data) => { this.services.set(data); this.loading.set(false) },
-      error: () => { this.loading.set(false); this.error.set(true) },
+      error: () => this.loading.set(false),
     })
   }
 
