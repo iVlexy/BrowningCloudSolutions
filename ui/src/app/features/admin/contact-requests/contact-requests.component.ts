@@ -72,12 +72,6 @@ import type { ContactRequest } from '../../../shared/models'
     </div>
   `,
   styles: [`
-    .page-header {
-      display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;
-      h1 { margin: 0; font-size: 24px; font-weight: 700; }
-      .page-sub { margin: 4px 0 0; color: #666; font-size: 14px; }
-    }
-
     .loading-row { display: flex; justify-content: center; padding: 48px; }
 
     .requests-list { display: flex; flex-direction: column; gap: 12px; }
@@ -93,7 +87,8 @@ import type { ContactRequest } from '../../../shared/models'
     }
 
     .req-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+      display: flex; justify-content: space-between; align-items: flex-start;
+      flex-wrap: wrap; gap: 4px; margin-bottom: 6px;
     }
 
     .req-name {
@@ -109,7 +104,7 @@ import type { ContactRequest } from '../../../shared/models'
     .req-contact { font-size: 13px; color: #1565C0; margin-bottom: 10px; a { color: #1565C0; } }
     .req-message { font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 16px; }
 
-    .req-actions { display: flex; gap: 8px; align-items: center; }
+    .req-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .reply-btn { background: #1565C0 !important; color: #fff !important; }
 
     .empty-state {

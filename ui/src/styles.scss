@@ -68,6 +68,23 @@ a {
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
+
+  @media (max-width: 600px) {
+    padding: 16px 12px;
+  }
+}
+
+// ─── Responsive page header ────────────────────────────────────────────────────
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  h1 { margin: 0; font-size: 24px; font-weight: 700; }
+  .page-sub { margin: 4px 0 0; color: #666; font-size: 14px; }
 }
 
 // ─── Card overrides ───────────────────────────────────────────────────────────

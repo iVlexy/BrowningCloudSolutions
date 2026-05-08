@@ -1,11 +1,14 @@
-import { Component, inject } from '@angular/core'
+import { Component, inject, viewChild } from '@angular/core'
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router'
-import { MatSidenavModule } from '@angular/material/sidenav'
+import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav'
 import { MatToolbarModule } from '@angular/material/toolbar'
 import { MatListModule } from '@angular/material/list'
 import { MatIconModule } from '@angular/material/icon'
 import { MatButtonModule } from '@angular/material/button'
 import { MatBadgeModule } from '@angular/material/badge'
+import { BreakpointObserver } from '@angular/cdk/layout'
+import { toSignal } from '@angular/core/rxjs-interop'
+import { map } from 'rxjs'
 import { AuthService } from '../../../core/services/auth.service'
 
 interface NavItem {
@@ -25,7 +28,10 @@ interface NavItem {
   template: `
     <mat-sidenav-container class="admin-container">
       <!-- Sidebar -->
-      <mat-sidenav mode="side" opened class="admin-sidenav">
+      <mat-sidenav #sidenav
+                   [mode]="isMobile() ? 'over' : 'side'"
+                   [opened]="!isMobile()"
+                   class="admin-sidenav">
         <div class="sidenav-header">
           <mat-icon class="brand-icon">cloud</mat-icon>
           <div>
@@ -39,7 +45,8 @@ interface NavItem {
             <a mat-list-item
                [routerLink]="['/admin', item.route]"
                routerLinkActive="active-nav-item"
-               class="nav-item">
+               class="nav-item"
+               (click)="closeOnMobile()">
               <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
               <span matListItemTitle>{{ item.label }}</span>
             </a>
@@ -47,7 +54,7 @@ interface NavItem {
         </mat-nav-list>
 
         <div class="sidenav-footer">
-          <a mat-list-item routerLink="/" class="nav-item">
+          <a mat-list-item routerLink="/" class="nav-item" (click)="closeOnMobile()">
             <mat-icon matListItemIcon>open_in_new</mat-icon>
             <span matListItemTitle>View Site</span>
           </a>
@@ -56,14 +63,21 @@ interface NavItem {
 
       <!-- Content area -->
       <mat-sidenav-content class="admin-content">
+        @if (isMobile()) {
+          <div class="mobile-toolbar">
+            <button mat-icon-button class="menu-btn" (click)="sidenavRef().toggle()">
+              <mat-icon>menu</mat-icon>
+            </button>
+            <mat-icon class="mobile-brand-icon">cloud</mat-icon>
+            <span class="mobile-brand-name">BCS Admin</span>
+          </div>
+        }
         <router-outlet />
       </mat-sidenav-content>
     </mat-sidenav-container>
   `,
   styles: [`
-    .admin-container {
-      height: 100vh;
-    }
+    .admin-container { height: 100vh; }
 
     .admin-sidenav {
       width: 240px;
@@ -79,42 +93,22 @@ interface NavItem {
       padding: 20px 16px;
       border-bottom: 1px solid rgba(255,255,255,0.1);
 
-      .brand-icon {
-        color: #64b5f6;
-        font-size: 32px;
-        width: 32px;
-        height: 32px;
-      }
-
-      .brand-name {
-        font-size: 16px;
-        font-weight: 700;
-        color: #fff;
-      }
-
+      .brand-icon { color: #64b5f6; font-size: 32px; width: 32px; height: 32px; }
+      .brand-name { font-size: 16px; font-weight: 700; color: #fff; }
       .user-email {
-        font-size: 11px;
-        color: #90caf9;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 160px;
+        font-size: 11px; color: #90caf9;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;
       }
     }
 
-    .nav-list {
-      flex: 1;
-      padding-top: 8px;
-    }
+    .nav-list { flex: 1; padding-top: 8px; }
 
     .nav-item {
       color: rgba(255,255,255,0.75) !important;
       border-radius: 0 24px 24px 0 !important;
       margin-right: 12px !important;
       margin-bottom: 2px !important;
-
       mat-icon { color: rgba(255,255,255,0.6) !important; }
-
       ::ng-deep .mdc-list-item__primary-text { color: rgba(255,255,255,0.75) !important; }
     }
 
@@ -126,23 +120,44 @@ interface NavItem {
     :host ::ng-deep .active-nav-item {
       background: rgba(100,181,246,0.2) !important;
       color: #90caf9 !important;
-
       mat-icon { color: #90caf9 !important; }
       .mdc-list-item__primary-text { color: #90caf9 !important; }
     }
 
-    .sidenav-footer {
-      border-top: 1px solid rgba(255,255,255,0.1);
-      padding: 8px 0;
-    }
+    .sidenav-footer { border-top: 1px solid rgba(255,255,255,0.1); padding: 8px 0; }
 
-    .admin-content {
-      background: #f8fafc;
+    .admin-content { background: #f8fafc; }
+
+    .mobile-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 8px 8px 4px;
+      background: #1a2332;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+
+      .menu-btn { color: #fff; }
+      .mobile-brand-icon { color: #64b5f6; font-size: 24px; width: 24px; height: 24px; }
+      .mobile-brand-name { font-size: 16px; font-weight: 700; color: #fff; }
     }
   `],
 })
 export class AdminLayoutComponent {
   auth = inject(AuthService)
+  private breakpoint = inject(BreakpointObserver)
+
+  sidenavRef = viewChild.required<MatSidenav>('sidenav')
+
+  isMobile = toSignal(
+    this.breakpoint.observe('(max-width: 768px)').pipe(map((r) => r.matches)),
+    { initialValue: false }
+  )
+
+  closeOnMobile() {
+    if (this.isMobile()) this.sidenavRef().close()
+  }
 
   navItems: NavItem[] = [
     { label: 'Clients', icon: 'people', route: 'clients' },

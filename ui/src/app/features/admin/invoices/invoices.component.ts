@@ -118,21 +118,15 @@ import type { Invoice, InvoiceStatus } from '../../../shared/models'
     </div>
   `,
   styles: [`
-    .page-header {
-      display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;
-      h1 { margin: 0; font-size: 24px; font-weight: 700; }
-      .page-sub { margin: 4px 0 0; color: #666; font-size: 14px; }
-    }
-
     .add-btn { background: #1565C0 !important; color: #fff !important; }
 
     .filter-row { margin-bottom: 20px; }
-    .filter-field { width: 220px; }
+    .filter-field { width: 220px; max-width: 100%; }
 
     .loading-row { display: flex; justify-content: center; padding: 48px; }
 
     .table-card {
-      background: #fff; border-radius: 12px; border: 1px solid #e8edf2; overflow: hidden;
+      background: #fff; border-radius: 12px; border: 1px solid #e8edf2; overflow-x: auto;
     }
 
     .inv-link { color: #1565C0; font-weight: 600; text-decoration: none; &:hover { text-decoration: underline; } }
@@ -140,6 +134,11 @@ import type { Invoice, InvoiceStatus } from '../../../shared/models'
     .num-col { text-align: right; }
     .no-data { text-align: center; padding: 48px !important; color: #888; }
     .danger-item { color: #c62828 !important; mat-icon { color: #c62828 !important; } }
+
+    @media (max-width: 600px) {
+      .filter-field { width: 100%; }
+      .mat-column-dueDate { display: none; }
+    }
   `],
 })
 export class InvoicesComponent implements OnInit {

@@ -107,17 +107,10 @@ import type { Client } from '../../../shared/models'
     </div>
   `,
   styles: [`
-    .page-header {
-      display: flex; justify-content: space-between; align-items: flex-start;
-      margin-bottom: 24px;
-      h1 { margin: 0; font-size: 24px; font-weight: 700; }
-      .page-sub { margin: 4px 0 0; color: #666; font-size: 14px; }
-    }
-
     .add-btn { background: #1565C0 !important; color: #fff !important; }
 
     .search-row { margin-bottom: 20px; }
-    .search-field { width: 360px; }
+    .search-field { width: 360px; max-width: 100%; }
 
     .loading-row { display: flex; justify-content: center; padding: 48px; }
 
@@ -125,13 +118,18 @@ import type { Client } from '../../../shared/models'
       background: #fff;
       border-radius: 12px;
       border: 1px solid #e8edf2;
-      overflow: hidden;
+      overflow-x: auto;
     }
 
     .client-link { color: #1565C0; font-weight: 500; text-decoration: none; &:hover { text-decoration: underline; } }
     .sub-text { font-size: 12px; color: #888; }
     .no-data { text-align: center; padding: 48px !important; color: #888; }
     .danger-item { color: #c62828 !important; mat-icon { color: #c62828 !important; } }
+
+    @media (max-width: 600px) {
+      .search-field { width: 100%; }
+      .mat-column-phone, .mat-column-createdAt { display: none; }
+    }
   `],
 })
 export class ClientsComponent implements OnInit {

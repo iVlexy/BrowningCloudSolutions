@@ -96,20 +96,18 @@ import type { Payment } from '../../../shared/models'
     </div>
   `,
   styles: [`
-    .page-header {
-      display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;
-      h1 { margin: 0; font-size: 24px; font-weight: 700; }
-      .page-sub { margin: 4px 0 0; color: #666; font-size: 14px; }
-    }
-
     .loading-row { display: flex; justify-content: center; padding: 48px; }
-    .table-card { background: #fff; border-radius: 12px; border: 1px solid #e8edf2; overflow: hidden; }
+    .table-card { background: #fff; border-radius: 12px; border: 1px solid #e8edf2; overflow-x: auto; }
     .inv-link { color: #1565C0; text-decoration: none; font-weight: 500; &:hover { text-decoration: underline; } }
     .sub-text { font-size: 12px; color: #888; }
     .stripe-id { color: #6772e5; font-weight: 500; }
     .num-col { text-align: right; }
     .amount-cell { font-weight: 600; &.refunded { color: #c62828; } }
     .no-data { text-align: center; padding: 48px !important; color: #888; }
+
+    @media (max-width: 600px) {
+      .mat-column-notes, .mat-column-status { display: none; }
+    }
   `],
 })
 export class PaymentsComponent implements OnInit {
