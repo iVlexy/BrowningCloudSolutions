@@ -52,10 +52,7 @@ app.get('/api/pay/:token', async (c) => {
 
 // ─── Auth check ───────────────────────────────────────────────────────────────
 app.get('/api/auth/me', authMiddleware, (c) => {
-  // Return the validated JWT so the Angular client can cache it in memory
-  // and send it as X-Auth-Jwt on all subsequent requests, bypassing the
-  // unreliable CF_Authorization cookie forwarding after first load.
-  return c.json({ email: c.var.userEmail, token: c.req.header('X-Auth-Jwt') ?? '' })
+  return c.json({ email: c.var.userEmail })
 })
 
 // ─── Protected routes ─────────────────────────────────────────────────────────
