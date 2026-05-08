@@ -5,16 +5,17 @@ export async function onRequest(context) {
   const url = new URL(request.url)
   const workerUrl = new URL(url.pathname + url.search, WORKER_URL)
 
-  // Cloudflare strips the Cookie header from cross-origin subrequests.
-  // Extract CF_Authorization cookie value and pass it explicitly as
-  // CF-Access-Jwt-Assertion so the Worker can still validate the token.
-  const cookieHeader = request.headers.get("cookie") ?? ""
-  const cfAuthMatch = cookieHeader.match(/(?:^|;\s*)CF_Authorization=([^;]+)/)
-  const cfAuthToken = cfAuthMatch ? cfAuthMatch[1].trim() : null
+  // CF strips CF-Access-Jwt-Assertion and Cookie from cross-origin subrequests.
+  // Read the JWT from the CF-added assertion header first, then fall back to
+  // the cookie value, and forward it as a custom header CF won't strip.
+  const cfJwt =
+    request.headers.get("CF-Access-Jwt-Assertion") ||
+    (request.headers.get("cookie") ?? "").match(/(?:^|;\s*)CF_Authorization=([^;]+)/)?.[1]?.trim() ||
+    null
 
   const forwardedHeaders = new Headers(request.headers)
-  if (cfAuthToken && !forwardedHeaders.get("CF-Access-Jwt-Assertion")) {
-    forwardedHeaders.set("CF-Access-Jwt-Assertion", cfAuthToken)
+  if (cfJwt) {
+    forwardedHeaders.set("X-Auth-Jwt", cfJwt)
   }
 
   const workerRequest = new Request(workerUrl.toString(), {

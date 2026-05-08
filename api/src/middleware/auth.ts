@@ -86,6 +86,7 @@ async function validateCFToken(token: string, teamDomain: string): Promise<strin
 export const authMiddleware = createMiddleware<{ Bindings: Env; Variables: Variables }>(
   async (c, next) => {
     const token =
+      c.req.header('X-Auth-Jwt') ??
       c.req.header('CF-Access-Jwt-Assertion') ??
       getCookie(c, 'CF_Authorization')
 
