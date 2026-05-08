@@ -120,8 +120,11 @@ async function updateInvoicePaymentStatus(
   const amountPaid = result[0]?.total ?? 0
   const now = Math.floor(Date.now() / 1000)
 
+  // Fetch the current invoice to preserve draft status when no payments exist
+  const currentInvoice = await db.select({ status: invoices.status }).from(invoices).where(eq(invoices.id, invoiceId)).get()
+
   let status: string
-  if (amountPaid <= 0) status = 'sent'
+  if (amountPaid <= 0) status = currentInvoice?.status === 'draft' ? 'draft' : 'sent'
   else if (amountPaid < invoice.total) status = 'partial'
   else status = 'paid'
 

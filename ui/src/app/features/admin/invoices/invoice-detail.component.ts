@@ -36,7 +36,7 @@ import type { Invoice } from '../../../shared/models'
                 <mat-icon>send</mat-icon>Send Invoice
               </button>
             }
-            @if (['sent','partial','overdue'].includes(invoice()!.status)) {
+            @if (['draft','sent','partial','overdue'].includes(invoice()!.status)) {
               <button mat-stroked-button (click)="recordPayment()">
                 <mat-icon>payments</mat-icon>Record Payment
               </button>
@@ -186,7 +186,7 @@ import type { Invoice } from '../../../shared/models'
                 </div>
               }
 
-              @if (['sent','partial','overdue'].includes(invoice()!.status)) {
+              @if (['draft','sent','partial','overdue'].includes(invoice()!.status)) {
                 <button mat-flat-button class="record-btn" (click)="recordPayment()">
                   <mat-icon>add</mat-icon>Record Payment
                 </button>
