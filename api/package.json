@@ -12,6 +12,7 @@
   "dependencies": {
     "drizzle-orm": "^0.38.3",
     "hono": "^4.7.4",
+    "postal-mime": "^2.7.4",
     "stripe": "^17.4.0"
   },
   "devDependencies": {

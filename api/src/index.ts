@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { eq, and, like, sql } from 'drizzle-orm'
+import PostalMime from 'postal-mime'
 import { clientsRouter } from './routes/clients'
 import { invoicesRouter } from './routes/invoices'
 import { paymentsRouter } from './routes/payments'
@@ -11,7 +12,7 @@ import { stripeRouter } from './routes/stripe'
 import { bugsRouter } from './routes/bugs'
 import { authMiddleware } from './middleware/auth'
 import { getDb } from './db'
-import { clients, invoices, invoiceItems } from './db/schema'
+import { clients, invoices, invoiceItems, bugs } from './db/schema'
 import type { Env, Variables } from './types'
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -148,5 +149,40 @@ export default {
   fetch: app.fetch.bind(app),
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(handleMonthlyBilling(env))
+  },
+  async email(message: ForwardableEmailMessage, env: Env, _ctx: ExecutionContext) {
+    try {
+      const rawEmail = await new Response(message.raw).text()
+      const parser = new PostalMime()
+      const parsed = await parser.parse(rawEmail)
+
+      const from = message.from ?? ''
+      const emailMatch = from.match(/<([^>]+)>/)
+      const submitterEmail = emailMatch ? emailMatch[1] : from.trim()
+      const nameMatch = from.match(/^([^<]+)</)
+      const submitterName = nameMatch ? nameMatch[1].trim() : null
+
+      const title = parsed.subject?.trim() || 'Bug report via email'
+      const description = parsed.text?.trim() || (parsed.html ?? '').replace(/<[^>]+>/g, '').trim() || '(no body)'
+
+      const db = getDb(env.DB)
+      const now = Math.floor(Date.now() / 1000)
+      await db.insert(bugs).values({
+        id: crypto.randomUUID(),
+        title,
+        description,
+        status: 'open',
+        priority: 'medium',
+        source: 'email',
+        submitterName,
+        submitterEmail,
+        notes: null,
+        isDeleted: false,
+        createdAt: now,
+        updatedAt: now,
+      })
+    } catch (err) {
+      console.error('Email handler error:', err)
+    }
   },
 }
