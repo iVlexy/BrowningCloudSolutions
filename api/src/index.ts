@@ -2,7 +2,6 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { eq, and, like, sql } from 'drizzle-orm'
-import PostalMime from 'postal-mime'
 import { clientsRouter } from './routes/clients'
 import { invoicesRouter } from './routes/invoices'
 import { paymentsRouter } from './routes/payments'
@@ -150,27 +149,39 @@ export default {
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(handleMonthlyBilling(env))
   },
-  async email(message: ForwardableEmailMessage, env: Env, _ctx: ExecutionContext) {
+  async email(message: any, env: Env, _ctx: ExecutionContext) {
+    console.log('email handler triggered, from:', message.from, 'to:', message.to)
     try {
-      const rawEmail = await new Response(message.raw).text()
-      const parser = new PostalMime()
-      const parsed = await parser.parse(rawEmail)
+      // Subject is directly available on headers without parsing raw email
+      const subject = (message.headers?.get('subject') ?? '').trim() || 'Bug report via email'
 
-      const from = message.from ?? ''
+      // Read body from the raw stream
+      let body = '(no body)'
+      try {
+        const raw: string = await new Response(message.raw).text()
+        // Find the header/body separator (double CRLF or LF)
+        const sep = raw.indexOf('\r\n\r\n')
+        const rawBody = sep !== -1 ? raw.slice(sep + 4).trim() : raw.trim()
+
+        // Strip MIME part headers if multipart — grab first text/plain segment
+        const plainMatch = rawBody.match(/Content-Type:\s*text\/plain[\s\S]*?\r?\n\r?\n([\s\S]*?)(?:\r?\n--|\s*$)/i)
+        body = (plainMatch ? plainMatch[1] : rawBody).trim() || '(no body)'
+      } catch (e) {
+        console.error('Body read error:', e)
+      }
+
+      const from: string = message.from ?? ''
       const emailMatch = from.match(/<([^>]+)>/)
       const submitterEmail = emailMatch ? emailMatch[1] : from.trim()
-      const nameMatch = from.match(/^([^<]+)</)
+      const nameMatch = from.match(/^"?([^"<]+)"?\s*</)
       const submitterName = nameMatch ? nameMatch[1].trim() : null
-
-      const title = parsed.subject?.trim() || 'Bug report via email'
-      const description = parsed.text?.trim() || (parsed.html ?? '').replace(/<[^>]+>/g, '').trim() || '(no body)'
 
       const db = getDb(env.DB)
       const now = Math.floor(Date.now() / 1000)
       await db.insert(bugs).values({
         id: crypto.randomUUID(),
-        title,
-        description,
+        title: subject,
+        description: body,
         status: 'open',
         priority: 'medium',
         source: 'email',
@@ -181,6 +192,7 @@ export default {
         createdAt: now,
         updatedAt: now,
       })
+      console.log('Bug created from email:', subject)
     } catch (err) {
       console.error('Email handler error:', err)
     }

@@ -5,7 +5,7 @@ import { MatTableModule } from '@angular/material/table'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatChipsModule } from '@angular/material/chips'
-import { MatDialogModule, MatDialog } from '@angular/material/dialog'
+import { MatDialogModule, MatDialog, MAT_DIALOG_DATA } from '@angular/material/dialog'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
 import { MatSelectModule } from '@angular/material/select'
@@ -13,8 +13,93 @@ import { MatMenuModule } from '@angular/material/menu'
 import { MatTooltipModule } from '@angular/material/tooltip'
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar'
+import { MatDividerModule } from '@angular/material/divider'
 import { ApiService } from '../../../core/services/api.service'
-import type { Bug, BugStatus, BugPriority } from '../../../shared/models'
+import type { Bug, BugStatus } from '../../../shared/models'
+
+// ─── View Dialog ──────────────────────────────────────────────────────────────
+@Component({
+  selector: 'app-bug-view-dialog',
+  standalone: true,
+  imports: [CommonModule, MatButtonModule, MatDialogModule, MatIconModule, MatChipsModule, MatDividerModule],
+  template: `
+    <h2 mat-dialog-title style="display:flex;align-items:center;gap:10px">
+      <mat-icon style="color:#64748b">bug_report</mat-icon>
+      {{ bug.title }}
+    </h2>
+    <mat-dialog-content class="view-content">
+      <div class="meta-row">
+        <mat-chip [ngClass]="'priority-' + bug.priority" class="chip">{{ bug.priority | titlecase }}</mat-chip>
+        <mat-chip [ngClass]="'status-' + bug.status" class="chip">{{ statusLabel(bug.status) }}</mat-chip>
+        <span class="source-label">
+          <mat-icon class="source-icon">{{ sourceIcon(bug.source) }}</mat-icon>
+          {{ bug.source | titlecase }}
+        </span>
+        <span class="date">{{ bug.createdAt * 1000 | date:'MMM d, y, h:mm a' }}</span>
+      </div>
+
+      <mat-divider style="margin: 12px 0" />
+
+      <div class="section-label">Description</div>
+      <div class="description-box">{{ bug.description }}</div>
+
+      @if (bug.submitterName || bug.submitterEmail) {
+        <mat-divider style="margin: 12px 0" />
+        <div class="section-label">Submitter</div>
+        <div class="submitter-info">
+          @if (bug.submitterName) { <div>{{ bug.submitterName }}</div> }
+          @if (bug.submitterEmail) { <div class="muted">{{ bug.submitterEmail }}</div> }
+        </div>
+      }
+
+      @if (bug.notes) {
+        <mat-divider style="margin: 12px 0" />
+        <div class="section-label">Internal Notes</div>
+        <div class="notes-box">{{ bug.notes }}</div>
+      }
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button mat-dialog-close>Close</button>
+      <button mat-flat-button color="primary" [mat-dialog-close]="'edit'">
+        <mat-icon>edit</mat-icon> Edit
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .view-content { min-width: 520px; padding-top: 4px; }
+    .meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .chip { font-size: 11px !important; height: 22px !important; padding: 0 8px !important; }
+    .source-label { display: flex; align-items: center; gap: 4px; color: #64748b; font-size: 13px; }
+    .source-icon { font-size: 16px; width: 16px; height: 16px; }
+    .date { margin-left: auto; color: #94a3b8; font-size: 12px; }
+    .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .description-box { white-space: pre-wrap; font-size: 14px; line-height: 1.6; color: #1e293b; background: #f8fafc; border-radius: 6px; padding: 12px; }
+    .notes-box { white-space: pre-wrap; font-size: 13px; line-height: 1.5; color: #475569; background: #fffbeb; border-radius: 6px; padding: 10px; }
+    .submitter-info { font-size: 14px; }
+    .muted { color: #64748b; font-size: 13px; }
+    .priority-low    { background: #dcfce7 !important; color: #166534 !important; }
+    .priority-medium { background: #fef9c3 !important; color: #854d0e !important; }
+    .priority-high   { background: #fed7aa !important; color: #9a3412 !important; }
+    .priority-critical { background: #fee2e2 !important; color: #991b1b !important; }
+    .status-open        { background: #dbeafe !important; color: #1e40af !important; }
+    .status-in_progress { background: #ede9fe !important; color: #5b21b6 !important; }
+    .status-resolved    { background: #dcfce7 !important; color: #166534 !important; }
+    .status-closed      { background: #f1f5f9 !important; color: #475569 !important; }
+    @media (max-width: 600px) { .view-content { min-width: unset; } }
+  `],
+})
+export class BugViewDialogComponent {
+  bug: Bug = inject(MAT_DIALOG_DATA)
+
+  statusLabel(status: string): string {
+    const labels: Record<string, string> = { open: 'Open', in_progress: 'In Progress', resolved: 'Resolved', closed: 'Closed' }
+    return labels[status] ?? status
+  }
+  sourceIcon(source: string): string {
+    const icons: Record<string, string> = { manual: 'edit_note', email: 'email', api: 'api' }
+    return icons[source] ?? 'help'
+  }
+}
 
 // ─── Create/Edit Dialog ───────────────────────────────────────────────────────
 @Component({
@@ -95,9 +180,8 @@ import type { Bug, BugStatus, BugPriority } from '../../../shared/models'
     @media (max-width: 600px) { .bug-form { min-width: unset; } }
   `],
 })
-export class BugDialogComponent {
+export class BugDialogComponent implements OnInit {
   private fb = inject(FormBuilder)
-  private dialog = inject(MatDialog)
 
   data: Bug | null = null  // injected by parent
 
@@ -127,7 +211,6 @@ export class BugDialogComponent {
 
   submit() {
     if (this.form.invalid) return
-    // Closed via dialog ref with form value — handled by caller
   }
 }
 
@@ -240,7 +323,7 @@ export class BugDialogComponent {
 
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let bug">
+              <td mat-cell *matCellDef="let bug" (click)="$event.stopPropagation()">
                 <button mat-icon-button [matMenuTriggerFor]="menu">
                   <mat-icon>more_vert</mat-icon>
                 </button>
@@ -265,7 +348,7 @@ export class BugDialogComponent {
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="columns"></tr>
-            <tr mat-row *matRowDef="let row; columns: columns;"></tr>
+            <tr mat-row *matRowDef="let row; columns: columns;" class="clickable-row" (click)="openView(row)"></tr>
 
             <tr class="mat-row" *matNoDataRow>
               <td [colSpan]="columns.length" class="no-data">No bug reports yet.</td>
@@ -325,6 +408,8 @@ export class BugDialogComponent {
     .date-cell { white-space: nowrap; font-size: 13px; color: #64748b; }
     .no-data { text-align: center; padding: 48px; color: #94a3b8; }
     .delete-item { color: #dc2626; }
+    .clickable-row { cursor: pointer; }
+    .clickable-row:hover { background: #f1f5f9; }
   `],
 })
 export class BugsComponent implements OnInit {
@@ -353,10 +438,24 @@ export class BugsComponent implements OnInit {
     })
   }
 
+  openView(bug: Bug) {
+    const ref = this.dialog.open(BugViewDialogComponent, {
+      width: '580px',
+      maxWidth: '95vw',
+      data: bug,
+    })
+    ref.afterClosed().subscribe((result) => {
+      if (result === 'edit') this.openEdit(bug)
+    })
+  }
+
   openCreate() {
     const ref = this.dialog.open(BugDialogComponent, { width: '560px', maxWidth: '95vw' })
-    const instance = ref.componentInstance
-    instance.data = null
+    ref.componentInstance.data = null
+    ref.componentInstance.submit = () => {
+      if (ref.componentInstance.form.invalid) return
+      ref.close(ref.componentInstance.form.value)
+    }
     ref.afterClosed().subscribe((result) => {
       if (!result) return
       this.api.createBug(result).subscribe({
@@ -364,12 +463,6 @@ export class BugsComponent implements OnInit {
         error: () => this.snack.open('Failed to create bug', 'Dismiss', { duration: 3000 }),
       })
     })
-    // Override submit to close with form value
-    const origSubmit = ref.componentInstance.submit.bind(ref.componentInstance)
-    ref.componentInstance.submit = () => {
-      if (ref.componentInstance.form.invalid) return
-      ref.close(ref.componentInstance.form.value)
-    }
   }
 
   openEdit(bug: Bug) {
