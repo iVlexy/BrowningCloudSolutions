@@ -82,6 +82,25 @@ export const payments = sqliteTable('payments', {
   createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
 })
 
+// ─── Bugs ─────────────────────────────────────────────────────────────────────
+// status: open | in_progress | resolved | closed
+// priority: low | medium | high | critical
+// source: manual | email | api
+export const bugs = sqliteTable('bugs', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  status: text('status').default('open').notNull(),
+  priority: text('priority').default('medium').notNull(),
+  source: text('source').default('manual').notNull(),
+  submitterName: text('submitter_name'),
+  submitterEmail: text('submitter_email'),
+  notes: text('notes'),
+  isDeleted: integer('is_deleted', { mode: 'boolean' }).default(false).notNull(),
+  createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
+  updatedAt: integer('updated_at').default(sql`(unixepoch())`).notNull(),
+})
+
 // ─── Contact Requests ─────────────────────────────────────────────────────────
 export const contactRequests = sqliteTable('contact_requests', {
   id: text('id').primaryKey(),
@@ -104,3 +123,5 @@ export type NewInvoice = typeof invoices.$inferInsert
 export type InvoiceItem = typeof invoiceItems.$inferSelect
 export type Payment = typeof payments.$inferSelect
 export type ContactRequest = typeof contactRequests.$inferSelect
+export type Bug = typeof bugs.$inferSelect
+export type NewBug = typeof bugs.$inferInsert

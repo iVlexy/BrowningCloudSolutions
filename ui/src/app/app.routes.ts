@@ -95,6 +95,11 @@ export const routes: Routes = [
             (m) => m.ContactRequestsComponent
           ),
       },
+      {
+        path: 'bugs',
+        loadComponent: () =>
+          import('./features/admin/bugs/bugs.component').then((m) => m.BugsComponent),
+      },
     ],
   },
 

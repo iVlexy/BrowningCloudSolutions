@@ -8,6 +8,7 @@ import { paymentsRouter } from './routes/payments'
 import { servicesRouter } from './routes/services'
 import { contactRouter } from './routes/contact'
 import { stripeRouter } from './routes/stripe'
+import { bugsRouter } from './routes/bugs'
 import { authMiddleware } from './middleware/auth'
 import { getDb } from './db'
 import { clients, invoices, invoiceItems } from './db/schema'
@@ -56,6 +57,9 @@ app.get('/api/auth/me', authMiddleware, (c) => {
 })
 
 // ─── Protected routes ─────────────────────────────────────────────────────────
+// Bug report — public endpoints (no auth needed for /report and /inbound-email)
+app.route('/api/bugs', bugsRouter)
+
 app.use('/api/clients/*', authMiddleware)
 app.use('/api/invoices/*', authMiddleware)
 app.use('/api/payments/*', authMiddleware)

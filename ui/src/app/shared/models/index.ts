@@ -95,6 +95,26 @@ export interface ContactRequest {
   createdAt: number
 }
 
+// ─── Bug ──────────────────────────────────────────────────────────────────────
+export type BugStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
+export type BugPriority = 'low' | 'medium' | 'high' | 'critical'
+export type BugSource = 'manual' | 'email' | 'api'
+
+export interface Bug {
+  id: string
+  title: string
+  description: string
+  status: BugStatus
+  priority: BugPriority
+  source: BugSource
+  submitterName?: string | null
+  submitterEmail?: string | null
+  notes?: string | null
+  isDeleted: boolean
+  createdAt: number
+  updatedAt: number
+}
+
 // ─── Public Invoice (payment page) ───────────────────────────────────────────
 export interface PublicInvoice {
   invoiceNumber: string

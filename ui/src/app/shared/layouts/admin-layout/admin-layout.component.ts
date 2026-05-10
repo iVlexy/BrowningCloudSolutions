@@ -165,5 +165,6 @@ export class AdminLayoutComponent {
     { label: 'Payments', icon: 'payments', route: 'payments' },
     { label: 'Services', icon: 'design_services', route: 'services' },
     { label: 'Requests', icon: 'mark_email_unread', route: 'requests' },
+    { label: 'Bugs', icon: 'bug_report', route: 'bugs' },
   ]
 }

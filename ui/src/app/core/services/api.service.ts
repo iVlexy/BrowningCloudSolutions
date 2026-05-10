@@ -9,6 +9,7 @@ import type {
   Payment,
   ContactRequest,
   PublicInvoice,
+  Bug,
 } from '../../shared/models'
 
 @Injectable({ providedIn: 'root' })
@@ -166,5 +167,35 @@ export class ApiService {
 
   createStripeCheckout(token: string): Observable<{ url: string }> {
     return this.http.post<{ url: string }>(`${this.base}/api/stripe/checkout`, { token })
+  }
+
+  // ─── Bugs ──────────────────────────────────────────────────────────────────────
+  getBugs(): Observable<Bug[]> {
+    return this.http.get<Bug[]>(`${this.base}/api/bugs`)
+  }
+
+  createBug(data: {
+    title: string
+    description: string
+    priority?: string
+    submitterName?: string
+    submitterEmail?: string
+    notes?: string
+  }): Observable<Bug> {
+    return this.http.post<Bug>(`${this.base}/api/bugs`, data)
+  }
+
+  updateBug(id: string, data: {
+    status?: string
+    priority?: string
+    notes?: string
+    title?: string
+    description?: string
+  }): Observable<Bug> {
+    return this.http.put<Bug>(`${this.base}/api/bugs/${id}`, data)
+  }
+
+  deleteBug(id: string): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(`${this.base}/api/bugs/${id}`)
   }
 }
