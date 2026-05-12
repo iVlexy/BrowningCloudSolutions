@@ -14,6 +14,8 @@ import dashboardRouter from './routes/dashboard'
 import expensesRouter from './routes/expenses'
 import timeEntriesRouter from './routes/time-entries'
 import contractsRouter from './routes/contracts'
+import proposalsRouter from './routes/proposals'
+import notificationsRouter from './routes/notifications'
 import { authMiddleware } from './middleware/auth'
 import { getDb } from './db'
 import { clients, invoices, invoiceItems, bugs } from './db/schema'
@@ -72,6 +74,7 @@ app.use('/api/dashboard/*', authMiddleware)
 app.use('/api/expenses/*', authMiddleware)
 app.use('/api/time-entries/*', authMiddleware)
 app.use('/api/contracts/*', authMiddleware)
+app.use('/api/notifications/*', authMiddleware)
 
 app.route('/api/clients', clientsRouter)
 app.route('/api/invoices', invoicesRouter)
@@ -80,6 +83,8 @@ app.route('/api/dashboard', dashboardRouter)
 app.route('/api/expenses', expensesRouter)
 app.route('/api/time-entries', timeEntriesRouter)
 app.route('/api/contracts', contractsRouter)
+app.route('/api/proposals', proposalsRouter)
+app.route('/api/notifications', notificationsRouter)
 
 app.route('/api/portal', portalRouter)
 

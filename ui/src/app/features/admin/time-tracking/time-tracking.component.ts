@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common'
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms'
-import { RouterLink } from '@angular/router'import { MatCardModule } from '@angular/material/card'
+import { MatCardModule } from '@angular/material/card'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatTableModule } from '@angular/material/table'
@@ -95,7 +95,7 @@ export class TimeEntryDialogComponent {
 @Component({
   selector: 'app-time-tracking',
   standalone: true,
-  imports: [CommonModule, CurrencyPipe, DatePipe, RouterLink,
+  imports: [CommonModule, CurrencyPipe, DatePipe,
     MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatCheckboxModule,
     MatDialogModule, MatProgressSpinnerModule, MatSnackBarModule, MatTooltipModule],
   template: `

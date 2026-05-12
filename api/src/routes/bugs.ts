@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { eq, desc } from 'drizzle-orm'
 import { getDb } from '../db'
 import { bugs } from '../db/schema'
+import { createNotification } from '../lib/notifications'
 import { authMiddleware } from '../middleware/auth'
 import type { Env, Variables } from '../types'
 
@@ -40,6 +41,7 @@ router.post('/report', async (c) => {
   }
 
   await db.insert(bugs).values(bug)
+  await createNotification(db, 'bug_report', `New bug report: "${bug.title}"`, '/admin/bugs')
   return c.json(bug, 201)
 })
 
@@ -91,6 +93,7 @@ router.post('/inbound-email', async (c) => {
   }
 
   await db.insert(bugs).values(bug)
+  await createNotification(db, 'bug_report', `New bug report via email: "${bug.title}"`, '/admin/bugs')
   return c.json({ success: true }, 201)
 })
 

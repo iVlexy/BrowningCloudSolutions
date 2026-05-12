@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { eq, and } from 'drizzle-orm'
 import { getDb } from '../db'
 import { invoices, invoiceItems, payments, clients } from '../db/schema'
+import { createNotification } from '../lib/notifications'
 import { updateInvoicePaymentStatus } from './payments'
 import type { Env, Variables } from '../types'
 import Stripe from 'stripe'
@@ -183,7 +184,15 @@ router.post('/webhook', async (c) => {
           const inv = await db.select().from(invoices).where(eq(invoices.id, invoiceId)).get()
           const cl = inv ? await db.select().from(clients).where(eq(clients.id, inv.clientId)).get() : null
           const invItems = inv ? await db.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, inv.id)) : []
-          if (inv && cl) await sendReceiptEmail(c.env, inv, cl, invItems, (session.amount_total ?? 0) / 100)
+          if (inv && cl) {
+            await sendReceiptEmail(c.env, inv, cl, invItems, (session.amount_total ?? 0) / 100)
+            await createNotification(
+              db,
+              'invoice_paid',
+              `${cl.name} paid invoice ${inv.invoiceNumber} — $${((session.amount_total ?? 0) / 100).toFixed(2)}`,
+              `/admin/invoices/${inv.id}`,
+            )
+          }
         } catch (e) {
           console.error('Receipt email error:', e)
         }

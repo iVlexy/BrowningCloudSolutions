@@ -200,3 +200,42 @@ export type TimeEntry = typeof timeEntries.$inferSelect
 export type NewTimeEntry = typeof timeEntries.$inferInsert
 export type Contract = typeof contracts.$inferSelect
 export type NewContract = typeof contracts.$inferInsert
+
+// ─── Proposals ───────────────────────────────────────────────────────────────────────────────
+// status: draft | sent | accepted | declined
+export const proposals = sqliteTable('proposals', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id),
+  title: text('title').notNull(),
+  narrative: text('narrative'),
+  status: text('status').default('draft').notNull(),
+  viewToken: text('view_token').unique(),
+  notes: text('notes'),
+  isDeleted: integer('is_deleted', { mode: 'boolean' }).default(false).notNull(),
+  createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
+  updatedAt: integer('updated_at').default(sql`(unixepoch())`).notNull(),
+})
+
+export const proposalLineItems = sqliteTable('proposal_line_items', {
+  id: text('id').primaryKey(),
+  proposalId: text('proposal_id').notNull().references(() => proposals.id),
+  description: text('description').notNull(),
+  qty: real('qty').notNull().default(1),
+  unitPrice: real('unit_price').notNull(),
+})
+
+// ─── Notifications ────────────────────────────────────────────────────────────────────────────
+// type: contact_request | bug_report | invoice_paid | proposal_responded | contract_signed
+export const notifications = sqliteTable('notifications', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull(),
+  message: text('message').notNull(),
+  link: text('link'),
+  isRead: integer('is_read', { mode: 'boolean' }).default(false).notNull(),
+  createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
+})
+
+export type Proposal = typeof proposals.$inferSelect
+export type NewProposal = typeof proposals.$inferInsert
+export type ProposalLineItem = typeof proposalLineItems.$inferSelect
+export type Notification = typeof notifications.$inferSelect

@@ -1,5 +1,6 @@
 export type Env = {
   DB: D1Database
+  AI: Ai
   STRIPE_SECRET_KEY: string
   STRIPE_WEBHOOK_SECRET: string
   SENDGRID_API_KEY: string

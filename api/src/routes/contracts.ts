@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { eq, and, desc } from 'drizzle-orm'
 import { getDb } from '../db'
 import { contracts, clients } from '../db/schema'
+import { createNotification } from '../lib/notifications'
 import type { Env, Variables } from '../types'
 
 const router = new Hono<{ Bindings: Env; Variables: Variables }>()
@@ -99,6 +100,15 @@ router.put('/:id/sign', async (c) => {
     signedByEmail: body.signedByEmail,
     updatedAt: now,
   }).where(eq(contracts.id, id))
+
+  const client = await db.select().from(clients).where(eq(clients.id, existing.clientId)).get()
+  await createNotification(
+    db,
+    'contract_signed',
+    `Contract "${existing.title}" signed by ${body.signedByName}`,
+    '/admin/contracts',
+  ).catch(() => {})
+
   return c.json({ ...existing, status: 'signed', signedAt: now })
 })
 

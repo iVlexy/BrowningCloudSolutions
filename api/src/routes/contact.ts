@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { eq, desc } from 'drizzle-orm'
 import { getDb } from '../db'
 import { contactRequests } from '../db/schema'
+import { createNotification } from '../lib/notifications'
 import { authMiddleware } from '../middleware/auth'
 import type { Env, Variables } from '../types'
 
@@ -30,6 +31,9 @@ router.post('/', async (c) => {
   }
 
   await db.insert(contactRequests).values(request)
+
+  // Create in-app notification
+  await createNotification(db, 'contact_request', `New contact request from ${body.name}`, '/admin/requests')
 
   // Notify via email (best-effort)
   if (c.env.SENDGRID_API_KEY) {

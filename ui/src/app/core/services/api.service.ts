@@ -273,4 +273,56 @@ export class ApiService {
   deleteContract(id: string): Observable<any> {
     return this.http.delete<any>(`${this.base}/api/contracts/${id}`)
   }
+
+  // ─── Proposals ───────────────────────────────────────────────────────────────
+  getProposals(clientId?: string): Observable<any[]> {
+    let params = new HttpParams()
+    if (clientId) params = params.set('clientId', clientId)
+    return this.http.get<any[]>(`${this.base}/api/proposals`, { params })
+  }
+
+  getProposalByToken(token: string): Observable<any> {
+    return this.http.get<any>(`${this.base}/api/proposals/view/${token}`)
+  }
+
+  createProposal(data: any): Observable<any> {
+    return this.http.post<any>(`${this.base}/api/proposals`, data)
+  }
+
+  updateProposal(id: string, data: any): Observable<any> {
+    return this.http.put<any>(`${this.base}/api/proposals/${id}`, data)
+  }
+
+  sendProposal(id: string): Observable<any> {
+    return this.http.put<any>(`${this.base}/api/proposals/${id}/send`, {})
+  }
+
+  deleteProposal(id: string): Observable<any> {
+    return this.http.delete<any>(`${this.base}/api/proposals/${id}`)
+  }
+
+  respondToProposal(token: string, decision: 'accepted' | 'declined'): Observable<any> {
+    return this.http.put<any>(`${this.base}/api/proposals/respond/${token}`, { decision })
+  }
+
+  generateProposalNarrative(brief: string, clientName?: string): Observable<{ narrative: string }> {
+    return this.http.post<{ narrative: string }>(`${this.base}/api/proposals/generate-narrative`, { brief, clientName })
+  }
+
+  // ─── Notifications ────────────────────────────────────────────────────────────
+  getNotifications(): Observable<{ notifications: any[]; unreadCount: number }> {
+    return this.http.get<{ notifications: any[]; unreadCount: number }>(`${this.base}/api/notifications`)
+  }
+
+  markNotificationRead(id: string): Observable<any> {
+    return this.http.put<any>(`${this.base}/api/notifications/${id}/read`, {})
+  }
+
+  markAllNotificationsRead(): Observable<any> {
+    return this.http.put<any>(`${this.base}/api/notifications/read-all`, {})
+  }
+
+  deleteNotification(id: string): Observable<any> {
+    return this.http.delete<any>(`${this.base}/api/notifications/${id}`)
+  }
 }

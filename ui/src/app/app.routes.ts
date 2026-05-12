@@ -32,6 +32,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/payment/payment.component').then((m) => m.PaymentComponent),
       },
+      {
+        path: 'proposal/:token',
+        loadComponent: () =>
+          import('./features/proposal-view/proposal-view.component').then((m) => m.ProposalViewComponent),
+      },
     ],
   },
 
@@ -126,6 +131,11 @@ export const routes: Routes = [
         path: 'contracts',
         loadComponent: () =>
           import('./features/admin/contracts/contracts.component').then((m) => m.ContractsComponent),
+      },
+      {
+        path: 'proposals',
+        loadComponent: () =>
+          import('./features/admin/proposals/proposals.component').then((m) => m.ProposalsComponent),
       },
     ],
   },

@@ -14,5 +14,8 @@ FRONTEND_URL = "https://browningcloud.com"
 FROM_EMAIL = "invoices@browningcloud.com"
 COMPANY_NAME = "Browning Cloud Solutions"
 
+[ai]
+binding = "AI"
+
 [triggers]
 crons = ["0 8 1 * *", "0 9 * * *"]
