@@ -113,6 +113,73 @@ export const contactRequests = sqliteTable('contact_requests', {
   createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
 })
 
+// ─── Client Sessions (portal magic-link auth) ────────────────────────────────
+export const clientSessions = sqliteTable('client_sessions', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull(),
+  token: text('token').notNull().unique(),
+  expiresAt: integer('expires_at').notNull(),
+  createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
+})
+
+// ─── Support Tickets ─────────────────────────────────────────────────────────
+export const supportTickets = sqliteTable('support_tickets', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull(),
+  subject: text('subject').notNull(),
+  message: text('message').notNull(),
+  status: text('status').default('open').notNull(), // open | in_progress | resolved | closed
+  createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
+  updatedAt: integer('updated_at').default(sql`(unixepoch())`).notNull(),
+})
+
+// ─── Expenses ─────────────────────────────────────────────────────────────────
+// category: software | hardware | marketing | travel | labor | utilities | other
+export const expenses = sqliteTable('expenses', {
+  id: text('id').primaryKey(),
+  category: text('category').notNull(),
+  description: text('description').notNull(),
+  amount: real('amount').notNull(),
+  date: integer('date').notNull(),
+  clientId: text('client_id').references(() => clients.id),
+  receiptUrl: text('receipt_url'),
+  notes: text('notes'),
+  isDeleted: integer('is_deleted', { mode: 'boolean' }).default(false).notNull(),
+  createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
+  updatedAt: integer('updated_at').default(sql`(unixepoch())`).notNull(),
+})
+
+// ─── Time Entries ─────────────────────────────────────────────────────────────
+export const timeEntries = sqliteTable('time_entries', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id),
+  date: integer('date').notNull(),
+  hours: real('hours').notNull(),
+  description: text('description').notNull(),
+  rate: real('rate').notNull(),
+  invoiced: integer('invoiced', { mode: 'boolean' }).default(false).notNull(),
+  invoiceId: text('invoice_id').references(() => invoices.id),
+  createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
+  updatedAt: integer('updated_at').default(sql`(unixepoch())`).notNull(),
+})
+
+// ─── Contracts ────────────────────────────────────────────────────────────────
+// status: draft | sent | signed | declined
+export const contracts = sqliteTable('contracts', {
+  id: text('id').primaryKey(),
+  clientId: text('client_id').notNull().references(() => clients.id),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  status: text('status').default('draft').notNull(),
+  signedAt: integer('signed_at'),
+  signedByName: text('signed_by_name'),
+  signedByEmail: text('signed_by_email'),
+  signToken: text('sign_token').unique(),
+  isDeleted: integer('is_deleted', { mode: 'boolean' }).default(false).notNull(),
+  createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
+  updatedAt: integer('updated_at').default(sql`(unixepoch())`).notNull(),
+})
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type Client = typeof clients.$inferSelect
 export type NewClient = typeof clients.$inferInsert
@@ -125,3 +192,11 @@ export type Payment = typeof payments.$inferSelect
 export type ContactRequest = typeof contactRequests.$inferSelect
 export type Bug = typeof bugs.$inferSelect
 export type NewBug = typeof bugs.$inferInsert
+export type ClientSession = typeof clientSessions.$inferSelect
+export type SupportTicket = typeof supportTickets.$inferSelect
+export type Expense = typeof expenses.$inferSelect
+export type NewExpense = typeof expenses.$inferInsert
+export type TimeEntry = typeof timeEntries.$inferSelect
+export type NewTimeEntry = typeof timeEntries.$inferInsert
+export type Contract = typeof contracts.$inferSelect
+export type NewContract = typeof contracts.$inferInsert

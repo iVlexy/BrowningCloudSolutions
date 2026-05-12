@@ -198,4 +198,79 @@ export class ApiService {
   deleteBug(id: string): Observable<{ success: boolean }> {
     return this.http.delete<{ success: boolean }>(`${this.base}/api/bugs/${id}`)
   }
+
+  // --- Portal ---
+  portalMe(): Observable<any> {
+    return this.http.get<any>(`${this.base}/api/portal/me`)
+  }
+
+  portalSubmitTicket(data: { subject: string; message: string }): Observable<any> {
+    return this.http.post<any>(`${this.base}/api/portal/tickets`, data)
+  }
+
+  // ─── Dashboard ──────────────────────────────────────────────────────────────
+  getDashboard(): Observable<any> {
+    return this.http.get<any>(`${this.base}/api/dashboard`)
+  }
+
+  // ─── Expenses ───────────────────────────────────────────────────────────────
+  getExpenses(clientId?: string): Observable<any[]> {
+    let params = new HttpParams()
+    if (clientId) params = params.set('clientId', clientId)
+    return this.http.get<any[]>(`${this.base}/api/expenses`, { params })
+  }
+
+  createExpense(data: any): Observable<any> {
+    return this.http.post<any>(`${this.base}/api/expenses`, data)
+  }
+
+  deleteExpense(id: string): Observable<any> {
+    return this.http.delete<any>(`${this.base}/api/expenses/${id}`)
+  }
+
+  // ─── Time Entries ────────────────────────────────────────────────────────────
+  getTimeEntries(clientId?: string): Observable<any[]> {
+    let params = new HttpParams()
+    if (clientId) params = params.set('clientId', clientId)
+    return this.http.get<any[]>(`${this.base}/api/time-entries`, { params })
+  }
+
+  createTimeEntry(data: any): Observable<any> {
+    return this.http.post<any>(`${this.base}/api/time-entries`, data)
+  }
+
+  deleteTimeEntry(id: string): Observable<any> {
+    return this.http.delete<any>(`${this.base}/api/time-entries/${id}`)
+  }
+
+  invoiceTimeEntries(data: { entryIds: string[]; clientId: string; dueDate?: number; notes?: string; taxRate?: number }): Observable<any> {
+    return this.http.post<any>(`${this.base}/api/time-entries/invoice`, data)
+  }
+
+  // ─── Contracts ───────────────────────────────────────────────────────────────
+  getContracts(clientId?: string): Observable<any[]> {
+    let params = new HttpParams()
+    if (clientId) params = params.set('clientId', clientId)
+    return this.http.get<any[]>(`${this.base}/api/contracts`, { params })
+  }
+
+  createContract(data: { clientId: string; title: string; content: string }): Observable<any> {
+    return this.http.post<any>(`${this.base}/api/contracts`, data)
+  }
+
+  updateContract(id: string, data: any): Observable<any> {
+    return this.http.put<any>(`${this.base}/api/contracts/${id}`, data)
+  }
+
+  sendContract(id: string): Observable<any> {
+    return this.http.put<any>(`${this.base}/api/contracts/${id}/send`, {})
+  }
+
+  signContract(id: string, data: { signedByName: string; signedByEmail: string }): Observable<any> {
+    return this.http.put<any>(`${this.base}/api/contracts/${id}/sign`, data)
+  }
+
+  deleteContract(id: string): Observable<any> {
+    return this.http.delete<any>(`${this.base}/api/contracts/${id}`)
+  }
 }

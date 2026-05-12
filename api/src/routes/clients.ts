@@ -163,6 +163,9 @@ router.post('/:id/recurring/setup', async (c) => {
     stripeCustomerId = customer.id
   }
 
+  // Gross up to cover Stripe's 2.9% + $0.30 so we net exactly body.amount
+  const grossedAmount = Math.round(((body.amount + 0.30) / 0.971) * 100) // cents
+
   const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
     mode: 'subscription',
     customer: stripeCustomerId,
@@ -170,7 +173,7 @@ router.post('/:id/recurring/setup', async (c) => {
       price_data: {
         currency: 'usd',
         product_data: { name: 'Monthly Service Fee' },
-        unit_amount: Math.round(body.amount * 100),
+        unit_amount: grossedAmount,
         recurring: { interval: 'month' },
       },
       quantity: 1,

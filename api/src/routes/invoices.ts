@@ -205,12 +205,19 @@ router.post('/:id/send', async (c) => {
     .where(eq(invoiceItems.invoiceId, id))
     .orderBy(invoiceItems.sortOrder)
 
+  const existingPayments = await db
+    .select()
+    .from(payments)
+    .where(and(eq(payments.invoiceId, id), eq(payments.status, 'completed')))
+  const amountPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0)
+
   const paymentUrl = `${c.env.FRONTEND_URL}/pay/${invoice.paymentToken}`
 
   const emailHtml = generateInvoiceEmail({
     invoice,
     client,
     items,
+    amountPaid,
     paymentUrl,
     companyName: c.env.COMPANY_NAME,
   })
@@ -236,9 +243,11 @@ router.post('/:id/send', async (c) => {
   }
 
   const now = Math.floor(Date.now() / 1000)
+  // Preserve 'partial' status — only move to 'sent' from draft
+  const newStatus = invoice.status === 'draft' ? 'sent' : invoice.status
   await db
     .update(invoices)
-    .set({ status: 'sent', sentAt: now, updatedAt: now })
+    .set({ status: newStatus, sentAt: now, updatedAt: now })
     .where(eq(invoices.id, id))
 
   return c.json({ success: true })
@@ -309,15 +318,18 @@ function generateInvoiceEmail({
   invoice,
   client,
   items,
+  amountPaid,
   paymentUrl,
   companyName,
 }: {
   invoice: { invoiceNumber: string; dueDate: number | null; subtotal: number; taxAmount: number; total: number; notes: string | null }
   client: { name: string; email: string }
   items: Array<{ description: string; quantity: number; unitPrice: number; amount: number }>
+  amountPaid: number
   paymentUrl: string
   companyName: string
 }) {
+  const amountDue = Math.max(0, invoice.total - amountPaid)
   const dueDateStr = invoice.dueDate
     ? new Date(invoice.dueDate * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : 'Upon receipt'
@@ -359,7 +371,8 @@ function generateInvoiceEmail({
       </table>
       <div style="text-align:right;margin-bottom:24px;">
         ${invoice.taxAmount > 0 ? `<p style="margin:4px 0;color:#555;">Subtotal: $${invoice.subtotal.toFixed(2)}</p><p style="margin:4px 0;color:#555;">Tax: $${invoice.taxAmount.toFixed(2)}</p>` : ''}
-        <p style="margin:8px 0 0;font-size:20px;font-weight:bold;color:#1565C0;">Total: $${invoice.total.toFixed(2)}</p>
+        <p style="margin:8px 0 0;font-size:18px;font-weight:bold;color:#1a2332;">Invoice Total: $${invoice.total.toFixed(2)}</p>
+        ${amountPaid > 0 ? `<p style="margin:6px 0;color:#2e7d32;font-size:15px;">Amount Paid: -$${amountPaid.toFixed(2)}</p><p style="margin:6px 0;font-size:20px;font-weight:bold;color:#1565C0;border-top:2px solid #1565C0;padding-top:8px;">Balance Due: $${amountDue.toFixed(2)}</p>` : `<p style="margin:6px 0;font-size:20px;font-weight:bold;color:#1565C0;">Amount Due: $${invoice.total.toFixed(2)}</p>`}
         <p style="margin:4px 0;color:#777;font-size:13px;">Due: ${dueDateStr}</p>
       </div>
       ${invoice.notes ? `<p style="padding:16px;background:#f9f9f9;border-radius:6px;color:#555;font-size:14px;">${invoice.notes}</p>` : ''}

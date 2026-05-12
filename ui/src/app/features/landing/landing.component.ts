@@ -33,6 +33,10 @@ import type { Service } from '../../shared/models'
             Our Services
           </a>
         </div>
+        <div class="portal-hint">
+          Already a client?
+          <a routerLink="/portal" class="portal-link">Sign in to your portal</a>
+        </div>
       </div>
       <div class="hero-visual">
         <div class="hero-card">
@@ -104,6 +108,14 @@ import type { Service } from '../../shared/models'
         </a>
       </div>
     </section>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <span>&copy; {{ year }} Browning Cloud Solutions</span>
+      <a routerLink="/portal" class="footer-portal-link">
+        <mat-icon>lock</mat-icon> Client Portal
+      </a>
+    </footer>
   `,
   styles: [`
     // Hero
@@ -320,11 +332,47 @@ import type { Service } from '../../shared/models'
       font-size: 16px !important;
       font-weight: 600 !important;
     }
+
+    .portal-hint {
+      margin-top: 20px;
+      font-size: 13px;
+      color: #718096;
+    }
+
+    .portal-link {
+      color: #1565C0;
+      font-weight: 600;
+      text-decoration: none;
+      &:hover { text-decoration: underline; }
+    }
+
+    .site-footer {
+      background: #1a2332;
+      color: #a0aec0;
+      font-size: 13px;
+      padding: 20px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-portal-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #90caf9;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 13px;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+      &:hover { color: #fff; }
+    }
   `],
 })
 export class LandingComponent implements OnInit {
   private api = inject(ApiService)
   services = signal<Service[]>([])
+  year = new Date().getFullYear()
 
   features = [
     { icon: 'speed', title: 'Lightning Fast', desc: 'Sites built on modern stacks with edge hosting for blazing performance.' },

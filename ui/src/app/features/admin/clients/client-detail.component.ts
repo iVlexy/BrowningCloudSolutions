@@ -125,6 +125,9 @@ import type { Client, Invoice } from '../../../shared/models'
                   <mat-form-field appearance="outline" class="amount-field">
                     <mat-label>Monthly amount ($)</mat-label>
                     <input matInput type="number" min="1" step="0.01" formControlName="amount" placeholder="99.00" />
+                    @if (recurringForm.value.method === 'stripe' && recurringForm.value.amount && recurringForm.value.amount > 0) {
+                      <mat-hint>Customer charged \${{ grossedAmount() | number:'1.2-2' }}/mo &mdash; you net \${{ recurringForm.value.amount | number:'1.2-2' }}</mat-hint>
+                    }
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" class="method-field">
@@ -317,6 +320,11 @@ export class ClientDetailComponent implements OnInit {
     method: ['manual' as 'stripe' | 'manual', Validators.required],
     startDate: [null as Date | null],
   })
+
+  grossedAmount = () => {
+    const amt = this.recurringForm.value.amount ?? 0
+    return Math.round(((amt + 0.30) / 0.971) * 100) / 100
+  }
 
   tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(0,0,0,0); return d })()
 

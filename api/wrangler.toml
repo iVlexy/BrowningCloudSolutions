@@ -15,4 +15,4 @@ FROM_EMAIL = "invoices@browningcloud.com"
 COMPANY_NAME = "Browning Cloud Solutions"
 
 [triggers]
-crons = ["0 8 1 * *"]
+crons = ["0 8 1 * *", "0 9 * * *"]

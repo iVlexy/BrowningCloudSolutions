@@ -35,6 +35,13 @@ export const routes: Routes = [
     ],
   },
 
+  // ─── Client Portal ──────────────────────────────────────────────────────────
+  {
+    path: 'portal',
+    loadComponent: () =>
+      import('./features/portal/portal-dashboard.component').then((m) => m.PortalDashboardComponent),
+  },
+
   // ── Admin layout ───────────────────────────────────────────────────────────
   {
     path: 'admin',
@@ -99,6 +106,26 @@ export const routes: Routes = [
         path: 'bugs',
         loadComponent: () =>
           import('./features/admin/bugs/bugs.component').then((m) => m.BugsComponent),
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./features/admin/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      {
+        path: 'expenses',
+        loadComponent: () =>
+          import('./features/admin/expenses/expenses.component').then((m) => m.ExpensesComponent),
+      },
+      {
+        path: 'time-tracking',
+        loadComponent: () =>
+          import('./features/admin/time-tracking/time-tracking.component').then((m) => m.TimeTrackingComponent),
+      },
+      {
+        path: 'contracts',
+        loadComponent: () =>
+          import('./features/admin/contracts/contracts.component').then((m) => m.ContractsComponent),
       },
     ],
   },

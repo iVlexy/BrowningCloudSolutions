@@ -31,9 +31,9 @@ import type { Invoice } from '../../../shared/models'
         </div>
         @if (invoice()) {
           <div class="header-actions">
-            @if (invoice()!.status === 'draft') {
+            @if (['draft','sent','partial','overdue'].includes(invoice()!.status)) {
               <button mat-stroked-button (click)="sendInvoice()">
-                <mat-icon>send</mat-icon>Send Invoice
+                <mat-icon>send</mat-icon>{{ invoice()!.status === 'draft' ? 'Send Invoice' : 'Resend Invoice' }}
               </button>
             }
             @if (['draft','sent','partial','overdue'].includes(invoice()!.status)) {
@@ -132,6 +132,16 @@ import type { Invoice } from '../../../shared/models'
                   <span>Total</span>
                   <span>\${{ invoice()!.total | number:'1.2-2' }}</span>
                 </div>
+                @if (totalPaid() > 0) {
+                  <div class="total-row paid-row">
+                    <span>Amount Paid</span>
+                    <span>-\${{ totalPaid() | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="total-row balance-row">
+                    <span>Balance Due</span>
+                    <span>\${{ (invoice()!.total - totalPaid()) | number:'1.2-2' }}</span>
+                  </div>
+                }
               </div>
 
               @if (invoice()!.notes) {
@@ -265,6 +275,13 @@ import type { Invoice } from '../../../shared/models'
     .grand-total {
       border-top: 2px solid #1a2332; margin-top: 8px; padding-top: 10px;
       font-size: 18px; font-weight: 700; color: #1a2332;
+    }
+
+    .paid-row { color: #2e7d32; font-weight: 500; }
+
+    .balance-row {
+      border-top: 2px solid #1565C0; margin-top: 8px; padding-top: 10px;
+      font-size: 18px; font-weight: 700; color: #1565C0;
     }
 
     .notes-section {

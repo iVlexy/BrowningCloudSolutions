@@ -160,9 +160,13 @@ export class AdminLayoutComponent {
   }
 
   navItems: NavItem[] = [
+    { label: 'Dashboard', icon: 'dashboard', route: 'dashboard' },
     { label: 'Clients', icon: 'people', route: 'clients' },
     { label: 'Invoices', icon: 'receipt_long', route: 'invoices' },
     { label: 'Payments', icon: 'payments', route: 'payments' },
+    { label: 'Expenses', icon: 'receipt', route: 'expenses' },
+    { label: 'Time Tracking', icon: 'schedule', route: 'time-tracking' },
+    { label: 'Contracts', icon: 'description', route: 'contracts' },
     { label: 'Services', icon: 'design_services', route: 'services' },
     { label: 'Requests', icon: 'mark_email_unread', route: 'requests' },
     { label: 'Bugs', icon: 'bug_report', route: 'bugs' },

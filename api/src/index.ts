@@ -9,6 +9,11 @@ import { servicesRouter } from './routes/services'
 import { contactRouter } from './routes/contact'
 import { stripeRouter } from './routes/stripe'
 import { bugsRouter } from './routes/bugs'
+import { portalRouter } from './routes/portal'
+import dashboardRouter from './routes/dashboard'
+import expensesRouter from './routes/expenses'
+import timeEntriesRouter from './routes/time-entries'
+import contractsRouter from './routes/contracts'
 import { authMiddleware } from './middleware/auth'
 import { getDb } from './db'
 import { clients, invoices, invoiceItems, bugs } from './db/schema'
@@ -63,10 +68,20 @@ app.route('/api/bugs', bugsRouter)
 app.use('/api/clients/*', authMiddleware)
 app.use('/api/invoices/*', authMiddleware)
 app.use('/api/payments/*', authMiddleware)
+app.use('/api/dashboard/*', authMiddleware)
+app.use('/api/expenses/*', authMiddleware)
+app.use('/api/time-entries/*', authMiddleware)
+app.use('/api/contracts/*', authMiddleware)
 
 app.route('/api/clients', clientsRouter)
 app.route('/api/invoices', invoicesRouter)
 app.route('/api/payments', paymentsRouter)
+app.route('/api/dashboard', dashboardRouter)
+app.route('/api/expenses', expensesRouter)
+app.route('/api/time-entries', timeEntriesRouter)
+app.route('/api/contracts', contractsRouter)
+
+app.route('/api/portal', portalRouter)
 
 // ─── Health ───────────────────────────────────────────────────────────────────
 app.get('/health', (c) => c.json({ ok: true, ts: Date.now() }))
@@ -144,10 +159,79 @@ async function handleMonthlyBilling(env: Env) {
   }
 }
 
+// ─── Daily overdue invoice check ──────────────────────────────────────────────
+async function handleOverdueInvoices(env: Env) {
+  const db = getDb(env.DB)
+  const now = Math.floor(Date.now() / 1000)
+
+  // Find sent/partial invoices with a due date in the past
+  const overdueInvoices = await db
+    .select()
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.isDeleted, false),
+        sql`${invoices.status} IN ('sent', 'partial')`,
+        sql`${invoices.dueDate} IS NOT NULL AND ${invoices.dueDate} < ${now}`
+      )
+    )
+
+  for (const invoice of overdueInvoices) {
+    // Mark overdue
+    await db.update(invoices).set({ status: 'overdue', updatedAt: now }).where(eq(invoices.id, invoice.id))
+
+    // Get client
+    const client = await db.select().from(clients).where(eq(clients.id, invoice.clientId)).get()
+    if (!client) continue
+
+    const paymentUrl = `${env.FRONTEND_URL}/pay/${invoice.paymentToken}`
+    const dueStr = new Date(invoice.dueDate! * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+
+    const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
+  <div style="max-width:540px;margin:30px auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+    <div style="background:#c62828;padding:28px 36px;">
+      <h1 style="margin:0;color:#fff;font-size:22px;">${env.COMPANY_NAME}</h1>
+      <p style="margin:6px 0 0;color:#ef9a9a;font-size:13px;">Payment Reminder</p>
+    </div>
+    <div style="padding:36px;">
+      <p style="margin:0 0 16px;">Hi ${client.name},</p>
+      <p style="margin:0 0 20px;color:#555;">This is a friendly reminder that invoice <strong>${invoice.invoiceNumber}</strong> for <strong>$${invoice.total.toFixed(2)}</strong> was due on <strong>${dueStr}</strong> and is now overdue.</p>
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${paymentUrl}" style="display:inline-block;background:#c62828;color:#fff;padding:14px 36px;text-decoration:none;border-radius:6px;font-size:16px;font-weight:bold;">Pay Now</a>
+      </div>
+      <p style="color:#888;font-size:13px;">If you have already sent payment, please disregard this email. Contact us at <a href="mailto:${env.FROM_EMAIL}" style="color:#1565C0;">${env.FROM_EMAIL}</a> with any questions.</p>
+      <hr style="margin:24px 0;border:none;border-top:1px solid #eee;">
+      <p style="color:#aaa;font-size:12px;text-align:center;">Thank you for choosing ${env.COMPANY_NAME}</p>
+    </div>
+  </div>
+</body>
+</html>`
+
+    await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.SENDGRID_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: client.email }] }],
+        from: { email: env.FROM_EMAIL, name: env.COMPANY_NAME },
+        subject: `Payment reminder — Invoice ${invoice.invoiceNumber} is overdue`,
+        content: [{ type: 'text/html', value: html }],
+      }),
+    })
+  }
+}
+
 export default {
   fetch: app.fetch.bind(app),
-  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(handleMonthlyBilling(env))
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    const cron = event.cron
+    if (cron === '0 8 1 * *') {
+      ctx.waitUntil(handleMonthlyBilling(env))
+    } else if (cron === '0 9 * * *') {
+      ctx.waitUntil(handleOverdueInvoices(env))
+    }
   },
   async email(message: any, env: Env, _ctx: ExecutionContext) {
     console.log('email handler triggered, from:', message.from, 'to:', message.to)
