@@ -13,6 +13,8 @@ CF_TEAM_DOMAIN = "browningcloudsolutions"
 FRONTEND_URL = "https://browningcloud.com"
 FROM_EMAIL = "invoices@browningcloud.com"
 COMPANY_NAME = "Browning Cloud Solutions"
+PLAID_CLIENT_ID = "6a0b26b8d0ad3d000ecaf92d"
+PLAID_BASE_URL = "https://production.plaid.com"
 
 [ai]
 binding = "AI"

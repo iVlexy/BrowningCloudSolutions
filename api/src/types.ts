@@ -8,6 +8,9 @@ export type Env = {
   FRONTEND_URL: string
   FROM_EMAIL: string
   COMPANY_NAME: string
+  PLAID_CLIENT_ID: string
+  PLAID_SECRET: string
+  PLAID_BASE_URL: string
 }
 
 export type Variables = {

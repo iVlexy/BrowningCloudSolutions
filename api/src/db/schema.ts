@@ -144,9 +144,20 @@ export const expenses = sqliteTable('expenses', {
   clientId: text('client_id').references(() => clients.id),
   receiptUrl: text('receipt_url'),
   notes: text('notes'),
+  plaidTransactionId: text('plaid_transaction_id').unique(),
   isDeleted: integer('is_deleted', { mode: 'boolean' }).default(false).notNull(),
   createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
   updatedAt: integer('updated_at').default(sql`(unixepoch())`).notNull(),
+})
+
+// ─── Bank Connections ─────────────────────────────────────────────────────
+export const bankConnections = sqliteTable('bank_connections', {
+  id: text('id').primaryKey(),
+  accessToken: text('access_token').notNull(),
+  itemId: text('item_id').notNull(),
+  institutionName: text('institution_name'),
+  cursor: text('cursor'),
+  connectedAt: integer('connected_at').notNull(),
 })
 
 // ─── Time Entries ─────────────────────────────────────────────────────────────
@@ -196,6 +207,7 @@ export type ClientSession = typeof clientSessions.$inferSelect
 export type SupportTicket = typeof supportTickets.$inferSelect
 export type Expense = typeof expenses.$inferSelect
 export type NewExpense = typeof expenses.$inferInsert
+export type BankConnection = typeof bankConnections.$inferSelect
 export type TimeEntry = typeof timeEntries.$inferSelect
 export type NewTimeEntry = typeof timeEntries.$inferInsert
 export type Contract = typeof contracts.$inferSelect

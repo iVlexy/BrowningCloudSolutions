@@ -137,6 +137,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/proposals/proposals.component').then((m) => m.ProposalsComponent),
       },
+      {
+        path: 'bank',
+        loadComponent: () =>
+          import('./features/admin/bank/bank.component').then((m) => m.BankComponent),
+      },
     ],
   },
 

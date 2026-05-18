@@ -16,6 +16,7 @@ import timeEntriesRouter from './routes/time-entries'
 import contractsRouter from './routes/contracts'
 import proposalsRouter, { runProposalReminders } from './routes/proposals'
 import notificationsRouter from './routes/notifications'
+import bankRouter, { syncBankTransactions } from './routes/bank'
 import { authMiddleware } from './middleware/auth'
 import { getDb } from './db'
 import { clients, invoices, invoiceItems, bugs } from './db/schema'
@@ -85,6 +86,7 @@ app.route('/api/time-entries', timeEntriesRouter)
 app.route('/api/contracts', contractsRouter)
 app.route('/api/proposals', proposalsRouter)
 app.route('/api/notifications', notificationsRouter)
+app.route('/api/bank', bankRouter)
 
 app.route('/api/portal', portalRouter)
 
@@ -237,6 +239,7 @@ export default {
     } else if (cron === '0 9 * * *') {
       ctx.waitUntil(handleOverdueInvoices(env))
       ctx.waitUntil(runProposalReminders(env))
+      ctx.waitUntil(syncBankTransactions(env))
     }
   },
   async email(message: any, env: Env, _ctx: ExecutionContext) {

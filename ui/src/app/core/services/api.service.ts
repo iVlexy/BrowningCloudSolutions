@@ -228,6 +228,27 @@ export class ApiService {
     return this.http.delete<any>(`${this.base}/api/expenses/${id}`)
   }
 
+  // ─── Bank ────────────────────────────────────────────────────────────────────
+  getBankStatus(): Observable<{ connected: boolean; institution: string | null; connectedAt: number | null }> {
+    return this.http.get<any>(`${this.base}/api/bank/status`)
+  }
+
+  getBankLinkToken(): Observable<{ linkToken: string }> {
+    return this.http.post<any>(`${this.base}/api/bank/link-token`, {})
+  }
+
+  connectBank(publicToken: string, institutionName: string): Observable<any> {
+    return this.http.post<any>(`${this.base}/api/bank/connect`, { publicToken, institutionName })
+  }
+
+  disconnectBank(): Observable<any> {
+    return this.http.delete<any>(`${this.base}/api/bank/disconnect`)
+  }
+
+  syncBank(): Observable<{ ok: boolean; imported: number }> {
+    return this.http.post<any>(`${this.base}/api/bank/sync`, {})
+  }
+
   // ─── Time Entries ────────────────────────────────────────────────────────────
   getTimeEntries(clientId?: string): Observable<any[]> {
     let params = new HttpParams()

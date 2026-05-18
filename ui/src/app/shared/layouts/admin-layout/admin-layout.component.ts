@@ -303,6 +303,7 @@ export class AdminLayoutComponent implements OnInit {
     { label: 'Contracts', icon: 'description', route: 'contracts' },
     { label: 'Services', icon: 'design_services', route: 'services' },
     { label: 'Requests', icon: 'mark_email_unread', route: 'requests' },
+    { label: 'Bank', icon: 'account_balance', route: 'bank' },
     { label: 'Bugs', icon: 'bug_report', route: 'bugs' },
   ]
 }
