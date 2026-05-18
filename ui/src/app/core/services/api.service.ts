@@ -233,8 +233,8 @@ export class ApiService {
     return this.http.get<any>(`${this.base}/api/bank/status`)
   }
 
-  getBankLinkToken(): Observable<{ linkToken: string }> {
-    return this.http.post<any>(`${this.base}/api/bank/link-token`, {})
+  getBankLinkToken(redirectUri?: string): Observable<{ linkToken: string }> {
+    return this.http.post<any>(`${this.base}/api/bank/link-token`, redirectUri ? { redirectUri } : {})
   }
 
   connectBank(publicToken: string, institutionName: string): Observable<any> {

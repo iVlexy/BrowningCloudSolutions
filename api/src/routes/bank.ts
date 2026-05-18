@@ -19,6 +19,9 @@ router.get('/status', authMiddleware, async (c) => {
 
 // ─── POST /api/bank/link-token ───────────────────────────────────────────────
 router.post('/link-token', authMiddleware, async (c) => {
+  const body = await c.req.json().catch(() => ({}))
+  const redirectUri = (body as any).redirectUri as string | undefined
+
   const resp = await fetch(`${c.env.PLAID_BASE_URL}/link/token/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -30,6 +33,7 @@ router.post('/link-token', authMiddleware, async (c) => {
       products: ['transactions'],
       country_codes: ['US'],
       language: 'en',
+      ...(redirectUri ? { redirect_uri: redirectUri } : {}),
     }),
   })
   const data = await resp.json() as any

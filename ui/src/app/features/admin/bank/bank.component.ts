@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core'
 import { CommonModule, DatePipe } from '@angular/common'
+import { ActivatedRoute } from '@angular/router'
 import { MatCardModule } from '@angular/material/card'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
@@ -9,6 +10,9 @@ import { MatDividerModule } from '@angular/material/divider'
 import { ApiService } from '../../../core/services/api.service'
 
 declare const Plaid: any
+
+const REDIRECT_URI = 'https://browningcloud.com/admin/bank'
+const LINK_TOKEN_KEY = 'plaid_link_token'
 
 @Component({
   selector: 'app-bank',
@@ -108,6 +112,7 @@ declare const Plaid: any
 export class BankComponent implements OnInit {
   private api = inject(ApiService)
   private snack = inject(MatSnackBar)
+  private route = inject(ActivatedRoute)
 
   status = signal<{ connected: boolean; institution: string | null; connectedAt: number | null } | null>(null)
   loading = signal(true)
@@ -117,6 +122,41 @@ export class BankComponent implements OnInit {
 
   ngOnInit() {
     this.loadStatus()
+
+    // Handle OAuth redirect back from bank (e.g. Bank OZK)
+    const params = this.route.snapshot.queryParamMap
+    if (params.has('oauth_state_id')) {
+      const storedToken = sessionStorage.getItem(LINK_TOKEN_KEY)
+      if (storedToken) {
+        this.connecting.set(true)
+        this.loadPlaidScript().then(() => {
+          const handler = Plaid.create({
+            token: storedToken,
+            receivedRedirectUri: window.location.href,
+            onSuccess: (publicToken: string, metadata: any) => {
+              sessionStorage.removeItem(LINK_TOKEN_KEY)
+              const institutionName = metadata?.institution?.name ?? 'Bank OZK'
+              this.api.connectBank(publicToken, institutionName).subscribe({
+                next: () => {
+                  this.connecting.set(false)
+                  this.snack.open(`${institutionName} connected!`, 'Close', { duration: 3000 })
+                  this.loadStatus()
+                },
+                error: () => {
+                  this.connecting.set(false)
+                  this.snack.open('Connection failed', 'Close', { duration: 4000 })
+                },
+              })
+            },
+            onExit: () => {
+              sessionStorage.removeItem(LINK_TOKEN_KEY)
+              this.connecting.set(false)
+            },
+          })
+          handler.open()
+        })
+      }
+    }
   }
 
   loadStatus() {
@@ -129,12 +169,15 @@ export class BankComponent implements OnInit {
 
   async connectBank() {
     this.connecting.set(true)
-    this.api.getBankLinkToken().subscribe({
+    this.api.getBankLinkToken(REDIRECT_URI).subscribe({
       next: async ({ linkToken }) => {
+        // Store token so we can resume after OAuth redirect
+        sessionStorage.setItem(LINK_TOKEN_KEY, linkToken)
         await this.loadPlaidScript()
         const handler = Plaid.create({
           token: linkToken,
           onSuccess: (publicToken: string, metadata: any) => {
+            sessionStorage.removeItem(LINK_TOKEN_KEY)
             const institutionName = metadata?.institution?.name ?? 'Bank OZK'
             this.api.connectBank(publicToken, institutionName).subscribe({
               next: () => {
@@ -148,7 +191,10 @@ export class BankComponent implements OnInit {
               },
             })
           },
-          onExit: () => this.connecting.set(false),
+          onExit: () => {
+            sessionStorage.removeItem(LINK_TOKEN_KEY)
+            this.connecting.set(false)
+          },
         })
         handler.open()
       },
