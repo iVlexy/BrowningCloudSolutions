@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core'
+import { Component, inject, OnInit, signal } from '@angular/core'
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common'
 import { FormBuilder, FormArray, ReactiveFormsModule, Validators } from '@angular/forms'
 import { MatCardModule } from '@angular/material/card'
@@ -117,7 +117,7 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
     </mat-dialog-actions>
   `,
   styles: [`
-    .dialog-form { display: flex; flex-direction: column; gap: 4px; min-width: 560px; padding-top: 8px; }
+    .dialog-form { display: flex; flex-direction: column; gap: 4px; width: 100%; padding-top: 8px; }
     .full-width { width: 100%; }
     .narrative-section { display: flex; flex-direction: column; gap: 4px; }
     .ai-section { display: flex; gap: 8px; align-items: flex-start; }
@@ -152,14 +152,17 @@ export class ProposalDialogComponent implements OnInit {
 
   get lineItems() { return this.form.get('lineItems') as FormArray }
 
-  total = computed(() => {
+  total = signal(0)
+
+  private calcTotal() {
     return this.lineItems.controls.reduce((sum, ctrl) => {
       const v = ctrl.value
       return sum + (Number(v.qty) || 0) * (Number(v.unitPrice) || 0)
     }, 0)
-  })
+  }
 
   ngOnInit() {
+    this.lineItems.valueChanges.subscribe(() => this.total.set(this.calcTotal()))
     if (this.data?.id) {
       this.form.get('clientId')?.clearValidators()
       this.form.patchValue({ title: this.data.title, narrative: this.data.narrative ?? '', notes: this.data.notes ?? '' })
@@ -357,7 +360,7 @@ export class ProposalsComponent implements OnInit {
   viewProposal(p: any) { this.previewProposal.set(p) }
 
   openCreate() {
-    const ref = this.dialog.open(ProposalDialogComponent, { width: '680px', data: null })
+    const ref = this.dialog.open(ProposalDialogComponent, { width: '720px', maxWidth: '95vw', data: null })
     ref.componentInstance.clients = this.clients()
     ref.afterClosed().subscribe((result) => {
       if (!result) return
@@ -369,7 +372,7 @@ export class ProposalsComponent implements OnInit {
   }
 
   openEdit(p: any) {
-    const ref = this.dialog.open(ProposalDialogComponent, { width: '680px', data: p })
+    const ref = this.dialog.open(ProposalDialogComponent, { width: '720px', maxWidth: '95vw', data: p })
     ref.componentInstance.clients = this.clients()
     ref.afterClosed().subscribe((result) => {
       if (!result) return

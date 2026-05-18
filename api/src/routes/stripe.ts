@@ -66,7 +66,7 @@ const router = new Hono<{ Bindings: Env; Variables: Variables }>()
 
 router.post('/checkout', async (c) => {
   const db = getDb(c.env.DB)
-  const body = await c.req.json<{ token: string }>()
+  const body = await c.req.json<{ token: string; payHalf?: boolean }>()
 
   const invoice = await db
     .select()
@@ -87,12 +87,24 @@ router.post('/checkout', async (c) => {
 
   if (amountDue <= 0) return c.json({ error: 'Invoice already paid' }, 400)
 
+  // If payHalf requested and nothing has been paid yet, charge 50%
+  const chargeAmount = (body.payHalf && amountPaid === 0) ? Math.round(amountDue / 2 * 100) / 100 : amountDue
+
   const stripe = new Stripe(c.env.STRIPE_SECRET_KEY, {
     httpClient: Stripe.createFetchHttpClient(),
   })
 
   // Gross up to cover Stripe's 2.9% + $0.30 processing fee
-  const grossedTotal = Math.round(((amountDue + 0.30) / 0.971) * 100) // cents
+  const grossedTotal = Math.round(((chargeAmount + 0.30) / 0.971) * 100) // cents
+
+  let description: string
+  if (body.payHalf && amountPaid === 0) {
+    description = `50% deposit on invoice ${invoice.invoiceNumber} (includes 2.9% + $0.30 card processing fee)`
+  } else if (amountPaid > 0) {
+    description = `Remaining balance on invoice ${invoice.invoiceNumber} (includes 2.9% + $0.30 card processing fee)`
+  } else {
+    description = `Payment for invoice ${invoice.invoiceNumber} (includes 2.9% + $0.30 card processing fee)`
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
@@ -102,9 +114,7 @@ router.post('/checkout', async (c) => {
           currency: 'usd',
           product_data: {
             name: `Invoice ${invoice.invoiceNumber}`,
-            description: amountPaid > 0
-              ? `Balance due on invoice ${invoice.invoiceNumber} (includes 2.9% + $0.30 card processing fee)`
-              : `Payment for invoice ${invoice.invoiceNumber} (includes 2.9% + $0.30 card processing fee)`,
+            description,
           },
           unit_amount: grossedTotal,
         },

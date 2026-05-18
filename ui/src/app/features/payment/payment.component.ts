@@ -112,10 +112,24 @@ import type { PublicInvoice } from '../../shared/models'
           @if (invoice()!.status !== 'paid' && invoice()!.status !== 'cancelled' && !success()) {
             <div class="payment-actions">
               <h3>Pay This Invoice</h3>
-              <button mat-flat-button class="stripe-btn" (click)="payWithCard()" [disabled]="paying()">
-                <mat-icon>credit_card</mat-icon>
-                @if (paying()) { Processing... } @else { Pay \${{ invoice()!.amountDue | number:'1.2-2' }} with Card }
-              </button>
+              @if (invoice()!.amountPaid === 0) {
+                <div class="payment-options">
+                  <button mat-flat-button class="stripe-btn deposit-btn" (click)="payWithCard(true)" [disabled]="paying() !== null">
+                    <mat-icon>credit_card</mat-icon>
+                    @if (paying() === 'half') { Processing... } @else { Pay 50% Deposit — \${{ invoice()!.amountDue / 2 | number:'1.2-2' }} }
+                  </button>
+                  <button mat-flat-button class="stripe-btn" (click)="payWithCard(false)" [disabled]="paying() !== null">
+                    <mat-icon>payments</mat-icon>
+                    @if (paying() === 'full') { Processing... } @else { Pay in Full — \${{ invoice()!.amountDue | number:'1.2-2' }} }
+                  </button>
+                </div>
+                <p class="deposit-note">Choose a 50% deposit now and pay the remaining balance after project completion, or pay the full amount today.</p>
+              } @else {
+                <button mat-flat-button class="stripe-btn" (click)="payWithCard(false)" [disabled]="paying() !== null">
+                  <mat-icon>credit_card</mat-icon>
+                  @if (paying() === 'full') { Processing... } @else { Pay Remaining Balance — \${{ invoice()!.amountDue | number:'1.2-2' }} }
+                </button>
+              }
 
               <div class="alt-payment">
                 <p><strong>Pay by Check:</strong> Make payable to "Browning Cloud Solutions" and mail to our address, referencing invoice {{ invoice()!.invoiceNumber }}.</p>
@@ -256,6 +270,20 @@ import type { PublicInvoice } from '../../shared/models'
       h3 { margin: 0 0 16px; font-size: 16px; }
     }
 
+    .payment-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .deposit-note {
+      font-size: 13px;
+      color: #888;
+      margin: 0 0 20px;
+      line-height: 1.5;
+    }
+
     .stripe-btn {
       background: #1565C0 !important;
       color: #fff !important;
@@ -266,7 +294,10 @@ import type { PublicInvoice } from '../../shared/models'
       display: flex !important;
       align-items: center;
       gap: 8px;
-      margin-bottom: 24px;
+    }
+
+    .deposit-btn {
+      background: #2e7d32 !important;
     }
 
     .alt-payment {
@@ -297,7 +328,7 @@ export class PaymentComponent implements OnInit {
   invoice = signal<PublicInvoice | null>(null)
   loading = signal(true)
   error = signal(false)
-  paying = signal(false)
+  paying = signal<'full' | 'half' | null>(null)
   success = signal(false)
 
   private token = ''
@@ -312,11 +343,11 @@ export class PaymentComponent implements OnInit {
     })
   }
 
-  payWithCard() {
-    this.paying.set(true)
-    this.api.createStripeCheckout(this.token).subscribe({
+  payWithCard(payHalf: boolean) {
+    this.paying.set(payHalf ? 'half' : 'full')
+    this.api.createStripeCheckout(this.token, payHalf).subscribe({
       next: ({ url }) => { window.location.href = url },
-      error: () => this.paying.set(false),
+      error: () => this.paying.set(null),
     })
   }
 }

@@ -165,8 +165,8 @@ export class ApiService {
     return this.http.get<PublicInvoice>(`${this.base}/api/pay/${token}`)
   }
 
-  createStripeCheckout(token: string): Observable<{ url: string }> {
-    return this.http.post<{ url: string }>(`${this.base}/api/stripe/checkout`, { token })
+  createStripeCheckout(token: string, payHalf = false): Observable<{ url: string }> {
+    return this.http.post<{ url: string }>(`${this.base}/api/stripe/checkout`, { token, payHalf })
   }
 
   // ─── Bugs ──────────────────────────────────────────────────────────────────────

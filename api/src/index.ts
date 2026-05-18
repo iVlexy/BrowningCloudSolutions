@@ -14,7 +14,7 @@ import dashboardRouter from './routes/dashboard'
 import expensesRouter from './routes/expenses'
 import timeEntriesRouter from './routes/time-entries'
 import contractsRouter from './routes/contracts'
-import proposalsRouter from './routes/proposals'
+import proposalsRouter, { runProposalReminders } from './routes/proposals'
 import notificationsRouter from './routes/notifications'
 import { authMiddleware } from './middleware/auth'
 import { getDb } from './db'
@@ -236,6 +236,7 @@ export default {
       ctx.waitUntil(handleMonthlyBilling(env))
     } else if (cron === '0 9 * * *') {
       ctx.waitUntil(handleOverdueInvoices(env))
+      ctx.waitUntil(runProposalReminders(env))
     }
   },
   async email(message: any, env: Env, _ctx: ExecutionContext) {

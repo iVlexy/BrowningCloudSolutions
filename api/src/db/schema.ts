@@ -211,6 +211,8 @@ export const proposals = sqliteTable('proposals', {
   status: text('status').default('draft').notNull(),
   viewToken: text('view_token').unique(),
   notes: text('notes'),
+  sentAt: integer('sent_at'),
+  reminderSentAt: integer('reminder_sent_at'),
   isDeleted: integer('is_deleted', { mode: 'boolean' }).default(false).notNull(),
   createdAt: integer('created_at').default(sql`(unixepoch())`).notNull(),
   updatedAt: integer('updated_at').default(sql`(unixepoch())`).notNull(),
