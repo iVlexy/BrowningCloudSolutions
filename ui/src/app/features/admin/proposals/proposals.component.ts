@@ -14,6 +14,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar'
 import { MatTooltipModule } from '@angular/material/tooltip'
 import { MatDividerModule } from '@angular/material/divider'
 import { ApiService } from '../../../core/services/api.service'
+import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe'
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   draft:    { bg: '#f5f5f5',  color: '#616161' },
@@ -203,7 +204,7 @@ export class ProposalDialogComponent implements OnInit {
   selector: 'app-proposals',
   standalone: true,
   imports: [CommonModule, CurrencyPipe, DatePipe, MatCardModule, MatButtonModule, MatIconModule,
-    MatTableModule, MatDialogModule, MatProgressSpinnerModule, MatSnackBarModule, MatTooltipModule],
+    MatTableModule, MatDialogModule, MatProgressSpinnerModule, MatSnackBarModule, MatTooltipModule, MarkdownPipe],
   template: `
     <div class="page-container">
       <div class="page-header">
@@ -288,7 +289,7 @@ export class ProposalDialogComponent implements OnInit {
             <button mat-icon-button (click)="previewProposal.set(null)"><mat-icon>close</mat-icon></button>
           </div>
           @if (previewProposal()!.narrative) {
-            <p class="narrative-text">{{ previewProposal()!.narrative }}</p>
+            <div class="narrative-text markdown-body" [innerHTML]="previewProposal()!.narrative | markdown"></div>
           }
           @if (previewProposal()!.lineItems?.length) {
             <table class="preview-table">
@@ -324,7 +325,24 @@ export class ProposalDialogComponent implements OnInit {
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }
     .preview-panel { background: #fff; border-radius: 8px; width: 700px; max-width: 90vw; max-height: 80vh; overflow-y: auto; padding: 28px; }
     .preview-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; h2 { margin: 0 0 6px; } }
-    .narrative-text { white-space: pre-wrap; line-height: 1.7; color: #333; margin-bottom: 24px; }
+    .narrative-text { line-height: 1.7; color: #333; margin-bottom: 24px; }
+    .markdown-body {
+      p { margin: 0 0 12px; }
+      p:last-child { margin-bottom: 0; }
+      h1, h2, h3, h4 { color: #1a2332; margin: 18px 0 8px; line-height: 1.3; }
+      h1 { font-size: 20px; }
+      h2 { font-size: 18px; }
+      h3 { font-size: 15px; }
+      ul, ol { margin: 0 0 12px; padding-left: 22px; }
+      li { margin-bottom: 6px; }
+      a { color: #1565c0; text-decoration: underline; }
+      strong { font-weight: 700; }
+      code { background: #f4f6f8; padding: 2px 6px; border-radius: 4px; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.9em; }
+      pre { background: #f4f6f8; padding: 14px 16px; border-radius: 8px; overflow-x: auto; code { background: none; padding: 0; } }
+      blockquote { border-left: 3px solid #64b5f6; margin: 0 0 12px; padding: 4px 0 4px 16px; color: #555; }
+      table { border-collapse: collapse; width: 100%; margin: 0 0 12px; th, td { border: 1px solid #e0e0e0; padding: 8px 12px; text-align: left; } th { background: #f8fafc; } }
+      img { max-width: 100%; height: auto; }
+    }
     .preview-table { width: 100%; border-collapse: collapse; font-size: 14px; }
     .preview-table th, .preview-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #eee; }
     .preview-table thead tr { background: #f8f8f8; }
