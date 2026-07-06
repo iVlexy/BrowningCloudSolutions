@@ -5,11 +5,12 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'
 import { MatIconModule } from '@angular/material/icon'
 import { ApiService } from '../../core/services/api.service'
+import { MarkdownPipe } from '../../shared/pipes/markdown.pipe'
 
 @Component({
   selector: 'app-proposal-view',
   standalone: true,
-  imports: [CommonModule, CurrencyPipe, DatePipe, MatButtonModule, MatProgressSpinnerModule, MatIconModule],
+  imports: [CommonModule, CurrencyPipe, DatePipe, MatButtonModule, MatProgressSpinnerModule, MatIconModule, MarkdownPipe],
   template: `
     <div class="proposal-page">
       <div class="proposal-header-bar">
@@ -48,7 +49,7 @@ import { ApiService } from '../../core/services/api.service'
           @if (proposal()!.narrative) {
             <div class="narrative-section">
               <h2 class="section-heading">Overview</h2>
-              <p class="narrative-text">{{ proposal()!.narrative }}</p>
+              <div class="narrative-text markdown-body" [innerHTML]="proposal()!.narrative | markdown"></div>
             </div>
           }
 
@@ -87,7 +88,7 @@ import { ApiService } from '../../core/services/api.service'
           @if (proposal()!.notes) {
             <div class="notes-section">
               <h2 class="section-heading">Additional Notes</h2>
-              <p class="notes-text">{{ proposal()!.notes }}</p>
+              <div class="notes-text markdown-body" [innerHTML]="proposal()!.notes | markdown"></div>
             </div>
           }
 
@@ -177,7 +178,6 @@ import { ApiService } from '../../core/services/api.service'
     }
 
     .narrative-text {
-      white-space: pre-wrap;
       line-height: 1.8;
       color: #444;
       font-size: 15px;
@@ -185,6 +185,47 @@ import { ApiService } from '../../core/services/api.service'
     }
 
     .notes-text { color: #555; font-size: 14px; line-height: 1.6; margin: 0; }
+
+    .markdown-body {
+      p { margin: 0 0 12px; }
+      p:last-child { margin-bottom: 0; }
+      h1, h2, h3, h4 { color: #1a2332; margin: 20px 0 10px; line-height: 1.3; }
+      h1 { font-size: 22px; }
+      h2 { font-size: 19px; }
+      h3 { font-size: 16px; }
+      ul, ol { margin: 0 0 12px; padding-left: 22px; }
+      li { margin-bottom: 6px; }
+      a { color: #1565c0; text-decoration: underline; }
+      strong { font-weight: 700; }
+      code {
+        background: #f4f6f8;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'SFMono-Regular', Consolas, monospace;
+        font-size: 0.9em;
+      }
+      pre {
+        background: #f4f6f8;
+        padding: 14px 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        code { background: none; padding: 0; }
+      }
+      blockquote {
+        border-left: 3px solid #64b5f6;
+        margin: 0 0 12px;
+        padding: 4px 0 4px 16px;
+        color: #555;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 0 0 12px;
+        th, td { border: 1px solid #e0e0e0; padding: 8px 12px; text-align: left; }
+        th { background: #f8fafc; }
+      }
+      img { max-width: 100%; height: auto; }
+    }
 
     .scope-table {
       width: 100%;
